@@ -16,17 +16,17 @@ Snorlax's Cave is a proxy and game site for local hosting and Replit deployments
 ## Join our community!
 
 # coming soon.
-
+- Added chat section!!!!
 ## Local hosting
 
 ### 1) Clone the repository
 ```bash
-git clone https://github.com/mrhafdsds/fdetkv3.git
+git clone https://github.com/8hrwallah/fdetkv4.git
 ```
 
 ### 2) Navigate into the project folder
 ```bash
-cd fdetkv3
+cd fdetkv4
 ```
 
 ### 3) Install dependencies
