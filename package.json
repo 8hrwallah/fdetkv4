@@ -1,0 +1,21 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "preinstall": "node -e \"const fs=require('fs'); ['package-lock.json','yarn.lock'].forEach((file)=>fs.rmSync(file,{force:true})); const ua=(process.env.npm_config_user_agent||''); if(!ua.startsWith('pnpm/')) { console.error('Use pnpm instead'); process.exit(1); }\"",
+    "build": "node ./scripts/run-pnpm.mjs run typecheck && node ./scripts/run-pnpm.mjs -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "node ./scripts/run-pnpm.mjs run typecheck:libs && node ./scripts/run-pnpm.mjs -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "build:snorlax": "node ./scripts/run-pnpm.mjs --filter @workspace/snorlax-cave run build && node ./scripts/run-pnpm.mjs --filter @workspace/api-server run build",
+    "start:snorlax": "node ./scripts/start-snorlax.mjs"
+  },
+  "private": true,
+  "dependencies": {
+    "@replit/connectors-sdk": "^0.4.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.3"
+  }
+}

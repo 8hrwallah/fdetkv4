@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Meet up, share discoveries, and chat with the INSTA XC4RS cave community." />
+  <title>Chat | INSTA XC4RS</title>
+  <meta property="og:image" content="/assets/img/newlogo.png">
+  <link rel="icon" href="/assets/img/newlogo.png">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="stylesheet" href="/assets/css/animations.css" />
+  <link rel="stylesheet" href="/assets/css/chat.css" />
+  <script src="/assets/js/functions.js"></script>
+  <script src="/assets/js/chat.js" defer></script>
+</head>
+<body class="chat-page">
+  <svg class="chat-icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-6A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24"><path d="M5 9h14M4 15h14M10 3 8 21m8-18-2 18"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3H3.7a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.4 11.1-8.5 8.5a5.7 5.7 0 0 1-8.1-8.1l9.2-9.2a3.8 3.8 0 0 1 5.4 5.4L10.2 17a1.9 1.9 0 1 1-2.7-2.7l8.1-8.1"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 12 7-12 7z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM15 5h3v14h-3z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m18 6-12 12M6 6l12 12"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="m16 3 5 5-4 1-4 4-1 5-2-2-5 5-1-1 5-5-2-2 5-1 4-4z"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 22V4m0 1c7-5 9 5 16 0v11c-7 5-9-5-16 0"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13"/></symbol>
+  </svg>
+
+  <nav class="chat-topbar">
+    <a class="chat-brand" href="/" aria-label="INSTA XC4RS home">INSTA <span>XC4RS</span></a>
+    <div class="chat-site-nav" aria-label="Main navigation">
+      <a href="/">Home</a>
+      <a href="/math">Games</a>
+      <a href="/english">Apps</a>
+      <a class="active" href="/chat.html" aria-current="page">Chat</a>
+      <a href="/about">About</a>
+      <a href="/settings">Settings</a>
+    </div>
+    <div class="chat-account">
+      <span class="connection-state" id="connection-state"><i></i><span>Connecting</span></span>
+      <button class="profile-button" id="profile-button" type="button" aria-label="Open profile menu">
+        <span class="avatar avatar-small" id="profile-avatar">?</span>
+        <span id="profile-name">Guest</span>
+        <span class="profile-caret">⌄</span>
+      </button>
+      <div class="profile-menu" id="profile-menu" hidden>
+        <button type="button" data-profile-action="rename">Change display name</button>
+        <button type="button" data-profile-action="signout">Leave chat</button>
+      </div>
+    </div>
+    <button class="mobile-panel-toggle" id="mobile-channels-toggle" type="button" aria-label="Open channels">☰</button>
+  </nav>
+
+  <main class="chat-frame">
+    <aside class="chat-sidebar channel-sidebar" id="channel-sidebar" aria-label="Chat channels">
+      <div class="server-heading">
+        <span class="server-emblem">◉</span>
+        <div><strong>CAVE CHAT</strong><small>General Cave · <b id="online-count">0</b> online</small></div>
+        <span class="server-live">Online</span>
+      </div>
+      <div class="side-section-heading"><span>CHANNELS</span><button id="add-channel" class="icon-button admin-only" type="button" aria-label="Add channel" hidden><svg><use href="#i-plus"/></svg></button></div>
+      <div id="channel-list" class="channel-list"></div>
+      <div class="channel-sidebar-footer"><span class="tiny-pulse"></span><span>Find your people in the cave</span></div>
+    </aside>
+
+    <section class="chat-main" aria-label="Community conversation">
+      <header class="channel-toolbar">
+        <div class="channel-title-wrap">
+          <button class="mobile-panel-toggle mobile-members-toggle" id="mobile-members-toggle" type="button" aria-label="Open members">♙</button>
+          <svg class="channel-title-icon"><use href="#i-hash"/></svg>
+          <div><h1 id="current-channel-name">general</h1><p id="current-channel-description">The main chat. Be kind, have fun!</p></div>
+        </div>
+        <div class="toolbar-actions">
+          <span class="online-summary"><svg><use href="#i-users"/></svg><span id="toolbar-online-count">0 online</span></span>
+          <button class="icon-button" id="search-toggle" type="button" aria-label="Search messages"><svg><use href="#i-search"/></svg></button>
+        </div>
+      </header>
+      <div class="search-strip" id="search-strip" hidden>
+        <svg><use href="#i-search"/></svg><input id="message-search" type="search" placeholder="Search this channel…" aria-label="Search messages">
+        <button id="clear-search" type="button" aria-label="Clear search"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="pinned-strip" id="pinned-strip" hidden></div>
+      <div class="room-notice" id="room-notice" hidden>
+        <svg><use href="#i-volume"/></svg><span id="room-notice-text"></span>
+        <button id="edit-notice" class="admin-only" type="button" hidden>Edit</button>
+      </div>
+      <div class="messages-wrap" id="messages-wrap">
+        <div class="history-loader" id="history-loader" hidden><span class="loader-dot"></span> Loading messages…</div>
+        <div class="messages-list" id="messages-list" aria-live="polite"></div>
+        <button class="new-message-pill" id="new-message-pill" type="button" hidden>New messages below ↓</button>
+        <div class="typing-note" id="typing-note" aria-live="polite"></div>
+      </div>
+      <div class="reply-preview" id="reply-preview" hidden>
+        <span>Replying to <strong id="reply-to-name"></strong></span>
+        <span class="reply-preview-text" id="reply-preview-text"></span>
+        <button id="cancel-reply" type="button" aria-label="Cancel reply"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="upload-preview" id="upload-preview" hidden></div>
+      <div class="recording-bar" id="recording-bar" hidden>
+        <span class="recording-pulse"></span><span id="recording-clock">00:00</span><span class="recording-label">Recording voice note</span>
+        <button id="cancel-recording" type="button">Cancel</button>
+        <button id="stop-recording" type="button">Stop</button>
+      </div>
+      <div class="recording-preview" id="recording-preview" hidden>
+        <audio id="recording-audio" controls></audio>
+        <button id="discard-recording" type="button" class="quiet-button">Discard</button>
+        <button id="send-recording" type="button" class="quiet-button">Send voice note</button>
+      </div>
+      <form class="composer" id="composer-form">
+        <textarea id="message-input" rows="1" maxlength="2000" placeholder="Join the cave to send a message…" aria-label="Write a message" disabled></textarea>
+        <div class="composer-actions">
+          <button class="icon-button composer-tool" id="emoji-toggle" type="button" aria-label="Choose emoji" disabled><svg><use href="#i-smile"/></svg></button>
+          <button class="icon-button composer-tool" id="attach-button" type="button" aria-label="Attach a file" disabled><svg><use href="#i-clip"/></svg></button>
+          <input id="file-input" type="file" accept="image/png,image/jpeg,image/gif,image/webp,application/pdf,text/plain,text/csv,text/markdown,audio/*" hidden>
+          <button class="icon-button composer-tool" id="record-button" type="button" aria-label="Record a voice message" disabled><svg><use href="#i-mic"/></svg></button>
+          <button class="send-button" id="send-button" type="submit" aria-label="Send message" disabled><svg><use href="#i-send"/></svg></button>
+        </div>
+        <div class="emoji-picker" id="emoji-picker" hidden></div>
+        <div class="composer-hint">Enter to send <span>·</span> Shift + Enter for a new line</div>
+      </form>
+    </section>
+
+    <aside class="chat-sidebar member-sidebar" id="member-sidebar" aria-label="Members and server tools">
+      <div class="members-heading"><span>Online Members</span><button class="icon-button" id="members-refresh" type="button" aria-label="Refresh members">↻</button></div>
+      <div class="member-search-wrap"><svg><use href="#i-search"/></svg><input id="member-search" type="search" placeholder="Find a cave friend…" aria-label="Search members"></div>
+      <div class="member-list" id="online-members"></div>
+      <button class="offline-heading" id="offline-toggle" type="button"><span>Offline Members</span><span id="offline-count">0</span><b>⌃</b></button>
+      <div class="member-list offline-list" id="offline-members"></div>
+      <div class="server-tools admin-only" id="server-tools" hidden>
+        <div class="side-section-heading"><span>SERVER TOOLS</span><svg><use href="#i-shield"/></svg></div>
+        <button type="button" data-server-action="notice">Room notice</button>
+        <button type="button" data-server-action="channel">Add a channel</button>
+        <button type="button" data-server-action="audit" id="audit-button">View audit log</button>
+        <p class="server-tools-note">Admin actions are recorded.</p>
+      </div>
+      <div class="room-card">
+        <div class="room-card-heading"><svg><use href="#i-volume"/></svg><span>Room Notice</span><button class="icon-button admin-only" id="notice-edit-icon" type="button" aria-label="Edit room notice" hidden>✎</button></div>
+        <p id="sidebar-notice">Keep it friendly and follow the rules!</p>
+      </div>
+    </aside>
+    <div class="drawer-scrim" id="drawer-scrim" hidden></div>
+  </main>
+
+  <div class="join-overlay" id="join-overlay" hidden>
+    <section class="join-card" role="dialog" aria-modal="true" aria-labelledby="join-title">
+      <a class="join-brand" href="/">INSTA <span>XC4RS</span></a>
+      <span class="join-cave-mark">◉</span>
+      <h2 id="join-title">Come on in</h2>
+      <p>Pick a name for the cave and join the conversation. No conventional account needed.</p>
+      <form id="join-form">
+        <label for="join-username">Your display name</label>
+        <input id="join-username" name="username" type="text" minlength="2" maxlength="20" autocomplete="nickname" placeholder="e.g. cave_explorer" required>
+        <details class="owner-setup">
+          <summary>Owner setup</summary>
+          <label for="owner-setup-secret">One-time setup code</label>
+          <input id="owner-setup-secret" name="ownerSetupSecret" type="password" autocomplete="off" placeholder="Only if configured by the owner">
+        </details>
+        <div class="join-error" id="join-error" role="alert"></div>
+        <button class="join-submit" type="submit"><span>Join the cave</span><span>→</span></button>
+      </form>
+      <small>2–20 letters, numbers, spaces, underscores, or hyphens</small>
+    </section>
+  </div>
+
+  <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Image preview">
+    <button class="lightbox-close" id="lightbox-close" type="button" aria-label="Close preview"><svg><use href="#i-close"/></svg></button>
+    <img id="lightbox-image" alt="Expanded chat attachment">
+  </div>
+  <div class="chat-toast" id="chat-toast" role="status" aria-live="polite"></div>
+</body>
+</html>
