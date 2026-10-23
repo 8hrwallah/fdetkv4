@@ -111,10 +111,6 @@ class UVServiceWorker extends EventEmitter {
 
             const response = await fetch(requestCtx.send);
 
-            if (response.status === 500) {
-                return Promise.reject('');
-            };
-
             const responseCtx = new ResponseContext(requestCtx, response, this);
             const resEvent = new HookEvent(responseCtx, null, null);
 
@@ -130,16 +126,18 @@ class UVServiceWorker extends EventEmitter {
             };
 
             if (responseCtx.headers['set-cookie']) {
-                Promise.resolve(ultraviolet.cookie.setCookies(responseCtx.headers['set-cookie'], db, ultraviolet.meta)).then(() => {
-                    self.clients.matchAll().then(function (clients){
-                        clients.forEach(function(client){
-                            client.postMessage({
-                                msg: 'updateCookies',
-                                url: ultraviolet.meta.url.href,
-                            });
+                try {
+                    await ultraviolet.cookie.setCookies(responseCtx.headers['set-cookie'], db, ultraviolet.meta);
+                    const clients = await self.clients.matchAll();
+                    for (const client of clients) {
+                        client.postMessage({
+                            msg: 'updateCookies',
+                            url: ultraviolet.meta.url.href,
                         });
-                    });
-                });
+                    }
+                } catch (error) {
+                    console.error('UV could not persist upstream cookies', error);
+                }
                 delete responseCtx.headers['set-cookie'];
             };
 
@@ -151,11 +149,15 @@ class UVServiceWorker extends EventEmitter {
                         responseCtx.body += ultraviolet.js.rewrite(
                             await response.text()
                         );
+                        delete responseCtx.headers['content-length'];
+                        delete responseCtx.headers['content-encoding'];
                         break;
                     case 'style':
                         responseCtx.body = ultraviolet.rewriteCSS(
                             await response.text()
                         ); 
+                        delete responseCtx.headers['content-length'];
+                        delete responseCtx.headers['content-encoding'];
                         break;
                 case 'iframe':
                 case 'document':
@@ -174,6 +176,8 @@ class UVServiceWorker extends EventEmitter {
                                     )
                                 }
                             );      
+                            delete responseCtx.headers['content-length'];
+                            delete responseCtx.headers['content-encoding'];
                         };
                 };
             };
@@ -191,9 +195,14 @@ class UVServiceWorker extends EventEmitter {
                 statusText: responseCtx.statusText,
             });
 
-        } catch(err) {
-            return new Response(err.toString(), {
-                status: 500,
+        } catch(error) {
+            console.error('UV proxy request failed', error);
+            return new Response('The proxied request could not be completed.', {
+                status: 502,
+                headers: {
+                    'cache-control': 'no-store',
+                    'content-type': 'text/plain; charset=utf-8',
+                },
             });
         };
     };

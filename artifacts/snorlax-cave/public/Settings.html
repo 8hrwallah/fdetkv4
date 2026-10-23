@@ -109,11 +109,10 @@
       <br>
       <br>
       <h1 class="large">Proxy Engine</h1>
-      <p>Titan is experimental: it starts with Ultraviolet and tries Scramjet if Ultraviolet cannot initialize.</p>
+      <p>Titan is not available yet; choose Ultraviolet or Scramjet.</p>
       <select id="proxyEngine" class="search-bar" style="width:250px;height:50px;margin:10px;">
         <option value="uv">Ultraviolet</option>
         <option value="scramjet">Scramjet (experimental)</option>
-        <option value="titan">Titan (experimental)</option>
       </select>
       <button onclick="saveProxyEngine()">Save Proxy Engine</button>
       <br>
@@ -133,8 +132,9 @@
       function loadSearchEngine() {
         document.getElementById('searchEngine').value = localStorage.getItem('searchEngine') || 'google';
         const selectedEngine = localStorage.getItem('proxyEngine');
-        document.getElementById('proxyEngine').value =
-          selectedEngine === 'scramjet' || selectedEngine === 'titan' ? selectedEngine : 'uv';
+        document.getElementById('proxyEngine').value = selectedEngine === 'scramjet'
+          ? 'scramjet'
+          : 'uv';
       }
 
       function saveSearchEngine() {
@@ -143,10 +143,7 @@
 
       function saveProxyEngine() {
         const selected = document.getElementById('proxyEngine').value;
-        localStorage.setItem(
-          'proxyEngine',
-          selected === 'scramjet' || selected === 'titan' ? selected : 'uv',
-        );
+        localStorage.setItem('proxyEngine', selected === 'scramjet' ? 'scramjet' : 'uv');
       }
 
       window.addEventListener('DOMContentLoaded', loadSearchEngine);

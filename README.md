@@ -68,13 +68,14 @@ The existing `.replit` config runs `pnpm run start:snorlax`. Set `DATABASE_URL` 
 - The app serves the static site and proxy routes from the API server.
 - Some sites like GeForce NOW and NVIDIA sign-in flows are intentionally treated as direct external links because UV rewriting breaks their browser/media requirements.
 - Both Ultraviolet and Scramjet proxy engines are available in settings.
-- Titan is an experimental startup fallback profile; it does not replace or fork either engine.
+- Titan is not available as an independent engine yet; old saved Titan selections now fail clearly instead of silently routing through another engine.
 
 ## Proxy engine guides
 
 - [Ultraviolet](./docs/UV.md)
 - [Scramjet](./docs/SCRAMJET.md)
-- [Titan (experimental)](./docs/TITAN.md)
+- [Titan status](./docs/TITAN.md)
+- [Compatibility and verification status](./docs/COMPATIBILITY-STATUS.md)
 
 See [CHANGELOG.md](./CHANGELOG.md) for recent runtime, service-worker, and hosting changes.
 

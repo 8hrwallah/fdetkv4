@@ -1,7 +1,45 @@
+import { resolveProxyEngine } from "./proxy-engine.js";
+
 let frame = document.getElementById("siteurl");
 const status = document.getElementById("proxy-status");
-let proxyNavigationStarted = false;
-let activeProxyEngine;
+
+window.__proxyHostDiagnostics = async () => {
+  const canvas = document.createElement("canvas");
+  let webgl = false;
+  let webglError;
+  try {
+    webgl = Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+  } catch (error) {
+    webglError = error instanceof Error ? error.message : String(error);
+  }
+
+  const inspectAsset = async (url) => {
+    try {
+      const response = await fetch(url, { method: "HEAD", cache: "no-store" });
+      return {
+        status: response.status,
+        contentType: response.headers.get("content-type"),
+        cacheControl: response.headers.get("cache-control"),
+      };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  };
+
+  return {
+    context: "outer portal only",
+    protocol: location.protocol,
+    isSecureContext: window.isSecureContext,
+    crossOriginIsolated: window.crossOriginIsolated,
+    webAssembly: typeof WebAssembly !== "undefined",
+    webGL: webgl,
+    webGLError: webglError,
+    sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+    serviceWorker: "serviceWorker" in navigator,
+    scramjetWasm: await inspectAsset("/scramjet/scramjet.wasm"),
+    uvServiceWorker: await inspectAsset("/sw.js"),
+  };
+};
 
 function showError(error) {
   if (!status) {
@@ -25,36 +63,6 @@ function showError(error) {
 
   status.append(title, detail, home);
   status.hidden = false;
-}
-
-function isYouTubeHostname(hostname) {
-  const host = hostname.toLowerCase().replace(/^www\./, "");
-  return host === "youtube.com"
-    || host.endsWith(".youtube.com")
-    || host === "youtube-nocookie.com"
-    || host.endsWith(".youtube-nocookie.com")
-    || host === "youtu.be";
-}
-
-function keepYouTubeLinksInProxy(event) {
-  const anchor = event.composedPath().find((node) => node?.tagName === "A" && node.href);
-  if (!anchor || !window.__scramjetController || !window.__scramjetFrame) return;
-
-  try {
-    const proxyFrame = window.__scramjetFrame;
-    const pathname = new URL(anchor.href).pathname;
-    if (!pathname.startsWith(proxyFrame.prefix)) return;
-
-    const encodedTarget = pathname.slice(proxyFrame.prefix.length);
-    const target = new URL(window.__scramjetController.config.codec.decode(encodedTarget));
-    if (!isYouTubeHostname(target.hostname)) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    window.__scramjetFrame.go(target.href);
-  } catch {
-    return;
-  }
 }
 
 function loadClassicScript(src) {
@@ -100,9 +108,7 @@ async function startUltraviolet(targetUrl) {
   });
   await window.waitForActiveServiceWorker(registration);
 
-  activeProxyEngine = "uv";
   frame.src = window.__uv$config.prefix + window.__uv$config.encodeUrl(targetUrl);
-  proxyNavigationStarted = true;
 }
 
 async function startScramjet(targetUrl) {
@@ -148,47 +154,12 @@ async function startScramjet(targetUrl) {
       init.body = new Uint8Array(0);
     }
   });
-  activeProxyEngine = "scramjet";
   proxyFrame.go(targetUrl);
-  proxyNavigationStarted = true;
 }
-
-async function startTitan(targetUrl) {
-  try {
-    await startUltraviolet(targetUrl);
-  } catch (uvError) {
-    console.warn("Titan could not initialize Ultraviolet; trying Scramjet.", uvError);
-    try {
-      await startScramjet(targetUrl);
-    } catch (scramjetError) {
-      throw new AggregateError(
-        [uvError, scramjetError],
-        "Titan could not initialize either proxy engine.",
-      );
-    }
-  }
-}
-
-function handleFrameLoad() {
-  if (proxyNavigationStarted) status.hidden = true;
-
-  if (activeProxyEngine !== "scramjet") return;
-
-  try {
-    const proxyDocument = frame.contentDocument;
-    if (!proxyDocument || proxyDocument.__snorlaxYouTubeClickHandler) return;
-    proxyDocument.__snorlaxYouTubeClickHandler = true;
-    proxyDocument.addEventListener("click", keepYouTubeLinksInProxy, true);
-  } catch {
-    return;
-  }
-}
-
-if (frame) frame.addEventListener("load", handleFrameLoad);
 
 async function startPortal() {
   if (!frame || !status) throw new Error("Proxy page elements are missing");
-  const engine = localStorage.getItem("proxyEngine") === "scramjet" ? "scramjet" : "uv";
+  const engine = resolveProxyEngine(localStorage.getItem("proxyEngine"));
   const targetUrl = await getTargetUrl(engine);
 
   if (!targetUrl) {
@@ -203,8 +174,6 @@ async function startPortal() {
 
   if (engine === "scramjet") {
     await startScramjet(target.href);
-  } else if (engine === "titan") {
-    await startTitan(target.href);
   } else {
     await startUltraviolet(target.href);
   }

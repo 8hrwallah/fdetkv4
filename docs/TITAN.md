@@ -1,13 +1,13 @@
-# Titan (experimental)
+# Titan (not available)
 
-Titan is an experimental startup orchestration profile available alongside UV and Scramjet. It reuses both existing engines rather than copying or modifying their rewrite implementations:
+Titan is **not currently an independent proxy engine**. An earlier implementation only tried UV and then Scramjet during startup; it had no separate request pipeline, URL format, rewriting implementation, service worker, or compatibility tests. That fallback profile has been removed from engine selection so Titan is not presented as an engine or silently routed to another engine.
 
-1. Try to initialize Ultraviolet and start the target navigation.
-2. If UV fails during initialization, try to initialize Scramjet for that target.
-3. If both initializations fail, report both errors through an `AggregateError`.
+If a browser still has `proxyEngine=titan` in local storage, the portal reports that Titan is unavailable and asks the user to select UV or Scramjet in Settings. This is intentional and avoids silently changing the selected engine.
 
-The fallback applies only to initialization failures before navigation starts. It cannot detect a target page that loads but later fails because of a framework bug, blocked API, DRM, authentication requirement, or server-side restriction. It does not switch engines after a target has begun loading.
+A real Titan implementation will require its own URL/origin layer, request and response pipeline, HTML/CSS/JavaScript rewriting, worker integration, WebSocket transport, tests, and repeatable benchmarks. No performance or site-compatibility claim is made until those components exist and have been measured.
 
-Choose **Titan (experimental)** in Settings to opt in. UV remains the default for existing users and for invalid or unknown stored engine values.
+## Current engine ownership
 
-This conservative design keeps the proxy libraries as the owners of their respective service workers and rewrite pipelines. A future independent Titan rewrite engine would need its own parser and rewrite tests, worker contract, transport integration, and compatibility suite; this profile is not represented as that work.
+- **Ultraviolet** owns the `/service/` URL scheme and `sw.js` request handling. Its rewrite and cookie logic comes from the bundled UV runtime.
+- **Scramjet** owns `/scramjet-proxy/`, the root-scoped controller worker, and Wisp/libcurl transport. Its rewriting comes from the pinned upstream Scramjet packages.
+- Neither existing engine is Titan, and neither is selected as a fallback under the Titan name.
