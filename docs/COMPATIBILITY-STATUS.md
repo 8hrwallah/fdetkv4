@@ -4,7 +4,7 @@ This status distinguishes automated local checks from real website/browser verif
 
 ## Local baseline and regression checks
 
-Before the latest fixes, the workspace typecheck and production build passed. The repository had no test script or browser automation dependency. The current automated Node tests exercise UV response status/body handling, binary partial responses, rewritten-body headers, internal transport errors, and Titan engine selection.
+Before the latest fixes, the workspace typecheck and production build passed. The repository had no test script or browser automation dependency. Automated Node tests now exercise Brave search URL generation, UV response status/body handling, binary partial responses, WASM streaming compilation, malformed target URL rejection, rewritten-body headers, internal transport errors, and engine selection.
 
 | Check | Result | Evidence |
 | --- | --- | --- |
@@ -12,6 +12,8 @@ Before the latest fixes, the workspace typecheck and production build passed. Th
 | Production site and API build | Passed | `pnpm run build:snorlax` |
 | UV upstream 500 preservation | Passed | Node regression test |
 | UV binary 206 preservation | Passed | Node regression test |
+| UV WASM response and streaming compilation | Passed | Minimal valid WASM module via `WebAssembly.instantiateStreaming` |
+| UV malformed decoded URL handling | Passed | Returns 400 before opening upstream transport |
 | UV transformed script headers | Passed | Node regression test |
 | UV internal transport failure response | Passed | Node regression test |
 | Titan engine selection | Passed | Explicitly rejects old `titan` value; never routes it to UV/Scramjet |

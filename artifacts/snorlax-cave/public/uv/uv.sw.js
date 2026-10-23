@@ -63,10 +63,27 @@ class UVServiceWorker extends EventEmitter {
                 this.config.construct(ultraviolet, 'service');
             };
 
+            let targetUrl;
+            try {
+                targetUrl = new URL(ultraviolet.sourceUrl(request.url));
+            } catch {
+                console.warn('UV rejected a malformed proxied URL', {
+                    destination: request.destination,
+                    method: request.method,
+                });
+                return new Response('The proxied URL is invalid.', {
+                    status: 400,
+                    headers: {
+                        'cache-control': 'no-store',
+                        'content-type': 'text/plain; charset=utf-8',
+                    },
+                });
+            }
+
             const db = await ultraviolet.cookie.db();
 
             ultraviolet.meta.origin = location.origin;
-            ultraviolet.meta.base = ultraviolet.meta.url = new URL(ultraviolet.sourceUrl(request.url));
+            ultraviolet.meta.base = ultraviolet.meta.url = targetUrl;
 
             const requestCtx = new RequestContext(
                 request, 

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 import { resolveProxyEngine } from "../artifacts/snorlax-cave/public/assets/js/proxy-engine.js";
+import { buildSearchUrl } from "../artifacts/snorlax-cave/public/assets/js/search.js";
 
 const uvWorkerSource = await readFile(
   new URL("../artifacts/snorlax-cave/public/uv/uv.sw.js", import.meta.url),
@@ -30,7 +31,7 @@ class TestUltraviolet {
   }
 
   sourceUrl() {
-    return "https://upstream.example/resource";
+    return TEST_DECODED_URL;
   }
 
   rewriteUrl(value) {
@@ -45,7 +46,13 @@ TestUltraviolet.mime = {
   contentType: (value) => value,
 };
 
-function makeWorker(upstreamFetch) {
+function makeWorker(upstreamFetch, decodedUrl = "https://upstream.example/resource") {
+  class WorkerUltraviolet extends TestUltraviolet {
+    sourceUrl() {
+      return decodedUrl;
+    }
+  }
+
   const self = {
     navigator: { userAgent: "test" },
     clients: { matchAll: async () => [] },
@@ -62,7 +69,7 @@ function makeWorker(upstreamFetch) {
   const sandbox = {
     self,
     location,
-    Ultraviolet: TestUltraviolet,
+    Ultraviolet: WorkerUltraviolet,
     EventEmitter: TestEventEmitter,
     HookEvent: undefined,
     RequestContext: undefined,
@@ -79,7 +86,10 @@ function makeWorker(upstreamFetch) {
     Headers,
     URL,
     Blob,
-    console: { error: (...args) => errors.push(args) },
+    console: {
+      error: (...args) => errors.push(args),
+      warn: (...args) => errors.push(args),
+    },
     __uv: undefined,
     __uv$config: config,
   };
@@ -122,6 +132,23 @@ test("portal does not override native YouTube anchor click behavior", () => {
   assert.doesNotMatch(portalSource, /preventDefault|stopImmediatePropagation|keepYouTubeLinksInProxy/);
 });
 
+test("search URLs use the selected provider and safely encode queries", () => {
+  const query = 'cats & dogs "quotes"';
+  assert.equal(
+    buildSearchUrl("brave", query),
+    "https://search.brave.com/search?q=cats%20%26%20dogs%20%22quotes%22",
+  );
+  assert.equal(
+    buildSearchUrl("duckduckgo", query),
+    "https://duckduckgo.com/?q=cats%20%26%20dogs%20%22quotes%22",
+  );
+  assert.equal(
+    buildSearchUrl("google", query),
+    "https://www.google.com/search?q=cats%20%26%20dogs%20%22quotes%22",
+  );
+  assert.equal(buildSearchUrl("unknown", "test"), "https://www.google.com/search?q=test");
+});
+
 test("UV preserves an upstream 500 status and response body", async () => {
   const { worker } = makeWorker(async () =>
     bareResponse(500, { "content-type": "text/plain" }, "upstream failure"),
@@ -146,6 +173,33 @@ test("UV preserves binary partial responses", async () => {
   assert.equal(response.status, 206);
   assert.equal(response.headers.get("content-range"), "bytes 0-5/10");
   assert.deepEqual(new Uint8Array(await response.arrayBuffer()), bytes);
+});
+
+test("UV preserves and instantiates valid WASM responses", async () => {
+  const wasmBytes = Uint8Array.from([0, 97, 115, 109, 1, 0, 0, 0]);
+  const { worker } = makeWorker(async () =>
+    bareResponse(200, { "content-type": "application/wasm" }, wasmBytes),
+  );
+
+  const response = await worker.fetch({ request: request("") });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "application/wasm");
+  const { module } = await WebAssembly.instantiateStreaming(response);
+  assert.ok(module instanceof WebAssembly.Module);
+});
+
+test("UV returns a clear client error for an invalid decoded target URL", async () => {
+  let transportRequested = false;
+  const { worker } = makeWorker(async () => {
+    transportRequested = true;
+    throw new Error("transport should not run");
+  }, "not a valid URL");
+
+  const response = await worker.fetch({ request: request() });
+  assert.equal(response.status, 400);
+  assert.equal(response.headers.get("content-type"), "text/plain; charset=utf-8");
+  assert.equal(await response.text(), "The proxied URL is invalid.");
+  assert.equal(transportRequested, false);
 });
 
 test("UV removes stale compression and length metadata after script rewriting", async () => {

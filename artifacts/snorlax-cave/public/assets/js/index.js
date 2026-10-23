@@ -1,3 +1,5 @@
+import { buildSearchUrl } from "./search.js";
+
 const input = document.getElementById("search");
 const form = input?.closest("form") || document.getElementById("proxy-search-form");
 
@@ -11,11 +13,7 @@ async function openProxy(event) {
     let url = input.value.trim();
     if (!url) throw new Error("Enter a URL or search term");
     if (!isUrl(url)) {
-      const searchEngine = localStorage.getItem("searchEngine") || "google";
-      const searchBase = searchEngine === "duckduckgo"
-        ? "https://duckduckgo.com/?q="
-        : "https://www.google.com/search?q=";
-      url = searchBase + encodeURIComponent(url);
+      url = buildSearchUrl(localStorage.getItem("searchEngine"), url);
     }
     else if (/^http:\/\//i.test(url)) {
       url = "https://" + url.slice("http://".length);
