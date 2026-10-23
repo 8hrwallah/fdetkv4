@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -23,14 +23,21 @@ if (build.status !== 0) {
   process.exit(build.status ?? 1);
 }
 
-const start = spawnSync(process.execPath, [pnpmRunner, '--filter', '@workspace/api-server', 'run', 'start'], {
+const serverEntry = fileURLToPath(new URL('../artifacts/api-server/dist/index.mjs', import.meta.url));
+const start = spawn(process.execPath, ['--enable-source-maps', serverEntry], {
   stdio: 'inherit',
   env: process.env,
 });
 
-if (start.error) {
-  console.error('Failed to start server:', start.error);
-  process.exit(1);
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => start.kill(signal));
 }
 
-process.exit(start.status ?? 0);
+start.on('error', (error) => {
+  console.error('Failed to start server:', error);
+  process.exitCode = 1;
+});
+
+start.on('exit', (code) => {
+  process.exitCode = code ?? 1;
+});

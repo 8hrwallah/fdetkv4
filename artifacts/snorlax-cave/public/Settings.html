@@ -109,10 +109,11 @@
       <br>
       <br>
       <h1 class="large">Proxy Engine</h1>
-      <p>Choose which proxy handles regular websites. YouTube video playback keeps using the direct in-app player.</p>
+      <p>Titan is experimental: it starts with Ultraviolet and tries Scramjet if Ultraviolet cannot initialize.</p>
       <select id="proxyEngine" class="search-bar" style="width:250px;height:50px;margin:10px;">
         <option value="uv">Ultraviolet</option>
         <option value="scramjet">Scramjet (experimental)</option>
+        <option value="titan">Titan (experimental)</option>
       </select>
       <button onclick="saveProxyEngine()">Save Proxy Engine</button>
       <br>
@@ -131,9 +132,9 @@
     <script>
       function loadSearchEngine() {
         document.getElementById('searchEngine').value = localStorage.getItem('searchEngine') || 'google';
-        document.getElementById('proxyEngine').value = localStorage.getItem('proxyEngine') === 'scramjet'
-          ? 'scramjet'
-          : 'uv';
+        const selectedEngine = localStorage.getItem('proxyEngine');
+        document.getElementById('proxyEngine').value =
+          selectedEngine === 'scramjet' || selectedEngine === 'titan' ? selectedEngine : 'uv';
       }
 
       function saveSearchEngine() {
@@ -142,7 +143,10 @@
 
       function saveProxyEngine() {
         const selected = document.getElementById('proxyEngine').value;
-        localStorage.setItem('proxyEngine', selected === 'scramjet' ? 'scramjet' : 'uv');
+        localStorage.setItem(
+          'proxyEngine',
+          selected === 'scramjet' || selected === 'titan' ? selected : 'uv',
+        );
       }
 
       window.addEventListener('DOMContentLoaded', loadSearchEngine);

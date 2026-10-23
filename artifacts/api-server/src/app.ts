@@ -13,17 +13,22 @@ app.set("trust proxy", 1);
 app.disable("etag");
 
 app.use((req, res, next) => {
-  const forwardedProto = req.get("x-forwarded-proto");
-
-  if (forwardedProto === "https") {
+  if (req.secure) {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
 
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-  res.setHeader("Pragma", "no-cache");
-  res.setHeader("Expires", "0");
+
+  if (req.path === "/sw.js" || req.path === "/scramjet-sw.js") {
+    res.setHeader("Cache-Control", "no-cache");
+  } else if (/^\/(assets|uv|scramjet|controller|libcurl)\//.test(req.path)) {
+    res.setHeader("Cache-Control", "public, max-age=3600");
+  } else {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  }
   next();
 });
 
@@ -79,6 +84,11 @@ app.use(
     cacheControl: false,
     etag: false,
     lastModified: false,
+    setHeaders(res, filePath) {
+      if (path.extname(filePath).toLowerCase() === ".wasm") {
+        res.type("application/wasm");
+      }
+    },
   }),
 );
 

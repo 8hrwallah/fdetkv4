@@ -10,6 +10,19 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (self.$scramjetController.shouldRoute(event)) {
-    event.respondWith(self.$scramjetController.route(event));
+    event.respondWith((async () => {
+      try {
+        return await self.$scramjetController.route(event);
+      } catch (error) {
+        console.error("Scramjet request failed", error);
+        return new Response("The proxied request could not be completed.", {
+          status: 502,
+          headers: {
+            "Cache-Control": "no-store",
+            "Content-Type": "text/plain; charset=utf-8",
+          },
+        });
+      }
+    })());
   }
 });

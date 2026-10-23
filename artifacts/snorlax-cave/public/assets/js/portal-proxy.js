@@ -1,15 +1,23 @@
 let frame = document.getElementById("siteurl");
 const status = document.getElementById("proxy-status");
 let proxyNavigationStarted = false;
+let activeProxyEngine;
 
 function showError(error) {
+  if (!status) {
+    console.error("Proxy page status element is missing:", error);
+    return;
+  }
+
   status.replaceChildren();
 
   const title = document.createElement("strong");
   title.textContent = "The proxy could not start.";
 
   const detail = document.createElement("span");
-  detail.textContent = error instanceof Error ? error.message : String(error);
+  detail.textContent = error instanceof AggregateError
+    ? error.errors.map((reason) => reason instanceof Error ? reason.message : String(reason)).join(" ")
+    : error instanceof Error ? error.message : String(error);
 
   const home = document.createElement("a");
   home.href = "/";
@@ -79,7 +87,7 @@ async function getTargetUrl(engine) {
   await ensureUvConfig();
   const decoded = window.__uv$config.decodeUrl(legacyEncodedUrl);
   const target = new URL(decoded);
-  if (engine === "scramjet") localStorage.setItem("proxyTargetUrl", target.href);
+  if (engine !== "uv") localStorage.setItem("proxyTargetUrl", target.href);
   return target.href;
 }
 
@@ -92,6 +100,7 @@ async function startUltraviolet(targetUrl) {
   });
   await window.waitForActiveServiceWorker(registration);
 
+  activeProxyEngine = "uv";
   frame.src = window.__uv$config.prefix + window.__uv$config.encodeUrl(targetUrl);
   proxyNavigationStarted = true;
 }
@@ -139,14 +148,31 @@ async function startScramjet(targetUrl) {
       init.body = new Uint8Array(0);
     }
   });
+  activeProxyEngine = "scramjet";
   proxyFrame.go(targetUrl);
   proxyNavigationStarted = true;
+}
+
+async function startTitan(targetUrl) {
+  try {
+    await startUltraviolet(targetUrl);
+  } catch (uvError) {
+    console.warn("Titan could not initialize Ultraviolet; trying Scramjet.", uvError);
+    try {
+      await startScramjet(targetUrl);
+    } catch (scramjetError) {
+      throw new AggregateError(
+        [uvError, scramjetError],
+        "Titan could not initialize either proxy engine.",
+      );
+    }
+  }
 }
 
 function handleFrameLoad() {
   if (proxyNavigationStarted) status.hidden = true;
 
-  if (localStorage.getItem("proxyEngine") !== "scramjet") return;
+  if (activeProxyEngine !== "scramjet") return;
 
   try {
     const proxyDocument = frame.contentDocument;
@@ -158,7 +184,7 @@ function handleFrameLoad() {
   }
 }
 
-frame.addEventListener("load", handleFrameLoad);
+if (frame) frame.addEventListener("load", handleFrameLoad);
 
 async function startPortal() {
   if (!frame || !status) throw new Error("Proxy page elements are missing");
@@ -177,6 +203,8 @@ async function startPortal() {
 
   if (engine === "scramjet") {
     await startScramjet(target.href);
+  } else if (engine === "titan") {
+    await startTitan(target.href);
   } else {
     await startUltraviolet(target.href);
   }

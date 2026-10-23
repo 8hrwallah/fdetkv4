@@ -62,6 +62,15 @@ The existing `.replit` config runs `pnpm run start:snorlax`. Set `DATABASE_URL` 
 - The app serves the static site and proxy routes from the API server.
 - Some sites like GeForce NOW and NVIDIA sign-in flows are intentionally treated as direct external links because UV rewriting breaks their browser/media requirements.
 - Both Ultraviolet and Scramjet proxy engines are available in settings.
+- Titan is an experimental startup fallback profile; it does not replace or fork either engine.
+
+## Proxy engine guides
+
+- [Ultraviolet](./docs/UV.md)
+- [Scramjet](./docs/SCRAMJET.md)
+- [Titan (experimental)](./docs/TITAN.md)
+
+See [CHANGELOG.md](./CHANGELOG.md) for recent runtime, service-worker, and hosting changes.
 
 ## Hosting / deployment
 This repo is configured for a Node + pnpm runtime and is designed to run correctly in Replit, local development, and similar Node hosting platforms.
@@ -84,4 +93,3 @@ For VPS deployments, set those variables with the service manager, keep `CHAT_SE
 
 ## Support us
 **[SUPPORT US!](https://patreon.com/SnorlaxCave)**
-

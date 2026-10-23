@@ -1,5 +1,6 @@
 function getSelectedProxyEngine() {
-    return localStorage.getItem('proxyEngine') === 'scramjet' ? 'scramjet' : 'uv';
+    const selected = localStorage.getItem('proxyEngine');
+    return selected === 'scramjet' || selected === 'titan' ? selected : 'uv';
 }
 
 function waitForActiveServiceWorker(registration, timeoutMs = 15000) {
