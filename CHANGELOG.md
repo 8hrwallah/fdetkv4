@@ -4,6 +4,7 @@
 
 - Added `pnpm start:snorlax-nodb` to build and run the site and proxy without PostgreSQL. It keeps health checks available and disables database-backed chat endpoints; the default startup remains unchanged.
 - UV's service worker now activates updates immediately and claims its `/service/` clients, avoiding waiting updates that could time out while older proxy tabs remain open.
+- Restored the UV worker's `userKey` value used when constructing Bare requests, preventing a `ReferenceError` that stopped proxied navigation and search.
 - Scramjet request failures now return a non-cacheable 502 response and are logged in the service worker instead of becoming opaque fetch failures.
 - Static assets and proxy engine bundles can be cached for one hour; the two service-worker entrypoints remain revalidated so deployments can update promptly.
 - `.wasm` files are explicitly served with the `application/wasm` MIME type, including in production.
