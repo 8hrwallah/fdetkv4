@@ -5,6 +5,10 @@ import { fileURLToPath } from 'node:url';
 const envFile = fileURLToPath(new URL('../.env', import.meta.url));
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 
+if (process.argv.includes('--no-db')) {
+  process.env.CHAT_DISABLED = 'true';
+}
+
 const port = process.env.PORT || '5000';
 process.env.PORT = port;
 

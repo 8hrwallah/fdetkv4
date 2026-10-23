@@ -8,7 +8,8 @@
     "typecheck:libs": "tsc --build",
     "typecheck": "node ./scripts/run-pnpm.mjs run typecheck:libs && node ./scripts/run-pnpm.mjs -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "build:snorlax": "node ./scripts/run-pnpm.mjs --filter @workspace/snorlax-cave run build && node ./scripts/run-pnpm.mjs --filter @workspace/api-server run build",
-    "start:snorlax": "node ./scripts/start-snorlax.mjs"
+    "start:snorlax": "node ./scripts/start-snorlax.mjs",
+    "start:snorlax-nodb": "node ./scripts/start-snorlax.mjs --no-db"
   },
   "private": true,
   "dependencies": {

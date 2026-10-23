@@ -50,6 +50,12 @@ pnpm start:snorlax
 
 Locally, the server defaults to port `5000`; browse to `http://localhost:5000/`.
 
+To run the site and proxy without PostgreSQL, use:
+```bash
+pnpm start:snorlax-nodb
+```
+This keeps the static site, proxy engines, and `/api/healthz` available, but disables all database-backed `/api/chat` endpoints. The regular `pnpm start:snorlax` command continues to require the database for chat.
+
 To initialize or recover the Owner, set both `CHAT_OWNER_USERNAME` and a strong `CHAT_OWNER_SETUP_SECRET` in the server environment. These are optional; ordinary visitors do not need an owner code. Keep the setup secret private and do not commit it.
 
 Attachments default to `./storage/chat`. Set `CHAT_STORAGE_DIR` to a durable mounted path on a VPS. Replit autoscale's local filesystem may be ephemeral, so configure a persistent volume or external storage before relying on uploaded files across deployments.

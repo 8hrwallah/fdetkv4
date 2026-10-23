@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import path from "node:path";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import router from "./routes";
+import healthRouter from "./routes/health";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -55,7 +55,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use("/api", router);
+app.use("/api", healthRouter);
+
+if (process.env.CHAT_DISABLED === "true") {
+  app.use("/api/chat", (_req, res) => {
+    res.status(503).json({ error: "Chat is unavailable when started without a database." });
+  });
+} else {
+  const { default: chatRouter } = await import("./routes/chat");
+  app.use("/api/chat", chatRouter);
+}
 
 const staticRoot = path.resolve(
   import.meta.dirname,
