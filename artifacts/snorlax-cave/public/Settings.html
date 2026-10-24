@@ -120,7 +120,7 @@
       <h1 class="large">Search Engine</h1>
       <br>
       <select id="searchEngine" class="search-bar" style="width:250px;height:50px;margin:10px;">
-        <option value="google">Chrome</option>
+        <option value="google">Google</option>
         <option value="duckduckgo">DuckDuckGo</option>
         <option value="brave">Brave</option>
       </select>
@@ -131,11 +131,12 @@
     <script src="/uv/uv.config.js"></script>
     <script>
       function loadSearchEngine() {
-        document.getElementById('searchEngine').value = localStorage.getItem('searchEngine') || 'google';
+        const searchEngine = localStorage.getItem('searchEngine');
+        document.getElementById('searchEngine').value = ['google', 'duckduckgo', 'brave'].includes(searchEngine)
+          ? searchEngine
+          : 'duckduckgo';
         const selectedEngine = localStorage.getItem('proxyEngine');
-        document.getElementById('proxyEngine').value = selectedEngine === 'scramjet'
-          ? 'scramjet'
-          : 'uv';
+        document.getElementById('proxyEngine').value = selectedEngine === 'uv' ? 'uv' : 'scramjet';
       }
 
       function saveSearchEngine() {

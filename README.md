@@ -67,7 +67,7 @@ The existing `.replit` config runs `pnpm run start:snorlax`. Set `DATABASE_URL` 
 - `DATABASE_URL` and `CHAT_SESSION_SECRET` are required. `CHAT_OWNER_USERNAME`, `CHAT_OWNER_SETUP_SECRET`, and `CHAT_STORAGE_DIR` are optional.
 - The app serves the static site and proxy routes from the API server.
 - Some sites like GeForce NOW and NVIDIA sign-in flows are intentionally treated as direct external links because UV rewriting breaks their browser/media requirements.
-- Both Ultraviolet and Scramjet proxy engines are available in settings.
+- Scramjet is the default proxy engine; Ultraviolet remains available as an explicit alternative in settings.
 - Titan is not available as an independent engine yet; old saved Titan selections now fail clearly instead of silently routing through another engine.
 
 ## Proxy engine guides

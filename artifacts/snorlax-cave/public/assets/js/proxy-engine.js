@@ -5,5 +5,5 @@ export function resolveProxyEngine(selection) {
     );
   }
 
-  return selection === "scramjet" ? "scramjet" : "uv";
+  return selection === "uv" ? "uv" : "scramjet";
 }

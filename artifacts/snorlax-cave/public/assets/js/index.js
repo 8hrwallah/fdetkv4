@@ -1,27 +1,21 @@
-import { buildSearchUrl } from "./search.js";
+import { isDuckDuckGoSearchUrl, resolveAddressInput } from "./search.js";
 
 const input = document.getElementById("search");
 const form = input?.closest("form") || document.getElementById("proxy-search-form");
 
 async function openProxy(event) {
   event?.preventDefault();
-  if (!form || !input || form.dataset.proxySubmitting === "true") return;
+  if (!form || !input || form.dataset.proxySubmitting === "true" || !input.value.trim()) return;
 
   form.dataset.proxySubmitting = "true";
 
+  let url;
   try {
-    let url = input.value.trim();
-    if (!url) throw new Error("Enter a URL or search term");
-    if (!isUrl(url)) {
-      url = buildSearchUrl(localStorage.getItem("searchEngine"), url);
+    url = resolveAddressInput(input.value, localStorage.getItem("searchEngine"));
+    if (!url) {
+      form.dataset.proxySubmitting = "false";
+      return;
     }
-    else if (/^http:\/\//i.test(url)) {
-      url = "https://" + url.slice("http://".length);
-    }
-    else if (!/^https:\/\//i.test(url)) {
-      url = "https://" + url;
-    }
-
     const target = new URL(url);
     if (target.hostname === "nvidia.com" || target.hostname.endsWith(".nvidia.com")) {
       window.location.assign(target.href);
@@ -34,6 +28,11 @@ async function openProxy(event) {
 
     await window.openProxyTarget(url);
   } catch (error) {
+    if (url && isDuckDuckGoSearchUrl(url)) {
+      console.warn("DuckDuckGo proxy navigation failed; opening results directly.", error);
+      window.location.assign(url);
+      return;
+    }
     form.dataset.proxySubmitting = "false";
     console.error("Unable to start the proxy:", error);
   }
@@ -42,16 +41,4 @@ async function openProxy(event) {
 if (form && input && form.dataset.proxyBound !== "true") {
   form.dataset.proxyBound = "true";
   form.addEventListener("submit", openProxy);
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") openProxy(event);
-  });
-}
-
-function isUrl(val = "") {
-  if (
-    /^http(s?):\/\//.test(val) ||
-    (val.includes(".") && val.substr(0, 1) !== " ")
-  )
-    return true;
-  return false;
 }

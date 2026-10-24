@@ -1,6 +1,6 @@
 # Ultraviolet
 
-Ultraviolet is the default proxy engine. Its bundled runtime and rewrite handlers are served from `public/uv/`; `/sw.js` controls requests under the configured `/service/` scope and `/bare/` is the Bare transport endpoint.
+Ultraviolet remains available as an explicitly selected alternative to the default Scramjet engine. Its bundled runtime and rewrite handlers are served from `public/uv/`; `/sw.js` controls requests under the configured `/service/` scope and `/bare/` is the Bare transport endpoint.
 
 The page registers the worker before navigating the proxy iframe. The worker now activates updates without waiting for every older proxied tab to close, then claims in-scope clients. Proxy cookies and request rewriting remain handled by the upstream UV runtime included in this repository.
 

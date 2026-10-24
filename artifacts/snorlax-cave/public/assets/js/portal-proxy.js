@@ -129,7 +129,6 @@ async function startScramjet(targetUrl) {
     serviceworker: serviceWorker,
     transport: new LibcurlClient({
       wisp: wispUrl,
-      connections: [160, 120, 24],
     }),
     config: {
       ...controllerConfig,

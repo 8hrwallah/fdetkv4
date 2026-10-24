@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24
+
+- Made Scramjet the default for new sessions and invalid saved engine values while preserving explicit Ultraviolet preferences; Titan still fails clearly instead of falling back.
+- Made DuckDuckGo the default search provider and added explicit URL-versus-search classification for domains, localhost ports, IPv4, and ordinary queries. Explicit HTTP remains HTTP; unsafe schemes and malformed hosts are rejected or searched rather than treated as proxy URLs.
+- Fixed the built homepage to load the address-bar module, safely ignores empty submissions, prevents duplicate in-flight submissions, and opens DuckDuckGo results directly if proxy navigation startup fails.
+- Added regression coverage for engine default/persistence behavior, DuckDuckGo defaults, the actual address-bar submit handler's URL/search matrix, Unicode/query encoding, HTTP URL preservation, empty input, and unsafe schemes.
+
 ## 2026-10-23
 
 - Added `pnpm start:snorlax-nodb` to build and run the site and proxy without PostgreSQL. It keeps health checks available and disables database-backed chat endpoints; the default startup remains unchanged.
