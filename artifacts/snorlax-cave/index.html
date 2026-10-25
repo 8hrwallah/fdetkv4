@@ -23,6 +23,15 @@
       document.documentElement.dataset.interfaceMode = "casual";
     }
   </script>
+  <script>
+    // Casual-only scripts are written into the document only when Casual is the active interface,
+    // so Tabbed does not download or run them while hidden.
+    window.fdetkInterface = document.documentElement.dataset.interfaceMode;
+    window.fdetkWriteScript = function (src, only, module) {
+      if (window.fdetkInterface !== only) return;
+      document.write('<script' + (module ? ' type="module"' : '') + ' src="' + src + '"><\/script>');
+    };
+  </script>
   <link rel="stylesheet" href="/assets/css/style.css?v=tabbed-workspace-4" />
   <link rel="stylesheet" href="/assets/css/tabbed-internal.css?v=8" />
   <link rel="stylesheet" href="/assets/css/animations.css" />
@@ -85,9 +94,11 @@
         
         <form method="POST" autocomplete="off" id="proxy-search-form">
           <input type="text" name="url" class="proxy" id="search" tag="searchbar" placeholder="Search the web!">
-          <script src="/uv/uv.bundle.js"></script>
-          <script src="/uv/uv.config.js"></script>
-          <script type="module" src="/assets/js/index.js"></script>
+          <script>
+            fdetkWriteScript("/uv/uv.bundle.js", "casual");
+            fdetkWriteScript("/uv/uv.config.js", "casual");
+            fdetkWriteScript("/assets/js/index.js", "casual", true);
+          </script>
         </form>
     </div>
     <section class="app-shortcuts" id="app-shortcuts" aria-label="App shortcuts">
@@ -99,7 +110,7 @@
         <span aria-hidden="true">&#8250;</span>
       </button>
     </section>
-    <script type="module" src="/assets/js/app-shortcuts.js?v=shortcuts-marquee-2"></script>
+    <script>fdetkWriteScript("/assets/js/app-shortcuts.js?v=shortcuts-marquee-2", "casual", true);</script>
     <script type="module" src="/assets/js/site-title.js?v=site-title-1"></script>
     <br>
     <center>
@@ -112,7 +123,7 @@
         'width' : 320,
         'params' : {}
       };
-      document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/7707205fbef64510c14defbad93feb7c/invoke.js"></scr' + 'ipt>');
+      if (window.fdetkInterface !== "tabbed") document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/7707205fbef64510c14defbad93feb7c/invoke.js"></scr' + 'ipt>');
     </script>
     </center>
     </div>
@@ -126,7 +137,7 @@
           'width' : 160,
           'params' : {}
         };
-        document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
+        if (window.fdetkInterface !== "tabbed") document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
       </script>
       </div>
       <br>
@@ -139,7 +150,7 @@
             'width' : 160,
             'params' : {}
           };
-          document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
+          if (window.fdetkInterface !== "tabbed") document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
         </script>
         </div>
       
@@ -292,7 +303,7 @@
 </div>
 </body>
 
-<script type="module" src="/assets/js/tabbed-browser.js?v=tabbed-workspace-12"></script>
+<script>fdetkWriteScript("/assets/js/tabbed-browser.js?v=tabbed-workspace-13", "tabbed", true);</script>
 </html>
 <!DOCTYPE html>
 <html lang="en">
@@ -360,7 +371,7 @@
         'width' : 320,
         'params' : {}
       };
-      document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/7707205fbef64510c14defbad93feb7c/invoke.js"></scr' + 'ipt>');
+      if (window.fdetkInterface !== "tabbed") document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/7707205fbef64510c14defbad93feb7c/invoke.js"></scr' + 'ipt>');
     </script>
     </center>
     </div>
@@ -374,7 +385,7 @@
           'width' : 160,
           'params' : {}
         };
-        document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
+        if (window.fdetkInterface !== "tabbed") document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
       </script>
       </div>
       <br>
@@ -387,7 +398,7 @@
             'width' : 160,
             'params' : {}
           };
-          document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
+          if (window.fdetkInterface !== "tabbed") document.write('<scr' + 'ipt type="text/javascript" src="//www.topcreativeformat.com/b5afbd3f7387ec207eb7011ac605f2c4/invoke.js"></scr' + 'ipt>');
         </script>
         </div>
       

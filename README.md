@@ -69,6 +69,7 @@ The existing `.replit` config runs `pnpm run start:snorlax`. Set `DATABASE_URL` 
 - NVIDIA domains remain direct links; GeForce NOW opens through the Scramjet proxy. Browser and upstream service requirements can still limit GeForce NOW.
 - Scramjet is the default proxy engine; Ultraviolet remains available as an explicit alternative in settings.
 - Titan is not available as an independent engine yet; old saved Titan selections now fail clearly instead of silently routing through another engine.
+- Casual is the default startup interface; choose Casual or Tabbed under Settings > Startup interface (saved in `localStorage.interfaceMode`). Only the selected interface's scripts are loaded.
 - Tabbed mode keeps Home, Settings, About, Games, and Apps inside its browser shell. App-defined `fdetk://home`, `fdetk://settings`, `fdetk://about`, `fdetk://games`, and `fdetk://apps` addresses are not privileged browser pages.
 
 ## Proxy engine guides

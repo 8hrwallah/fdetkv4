@@ -25,6 +25,15 @@
       document.documentElement.dataset.interfaceMode = "casual";
     }
   </script>
+  <script>
+    // Casual-only scripts are written into the document only when Casual is the active interface,
+    // so Tabbed does not download or run them while hidden.
+    window.fdetkInterface = document.documentElement.dataset.interfaceMode;
+    window.fdetkWriteScript = function (src, only, module) {
+      if (window.fdetkInterface !== only) return;
+      document.write('<script' + (module ? ' type="module"' : '') + ' src="' + src + '"><\/script>');
+    };
+  </script>
   <link rel="stylesheet" href="/assets/css/style.css?v=tabbed-workspace-4" />
   <link rel="stylesheet" href="/assets/css/tabbed-internal.css?v=8" />
   <link rel="stylesheet" href="/assets/css/animations.css" />
@@ -90,9 +99,11 @@
         
         <form method="POST" autocomplete="off" id="proxy-search-form">
           <input type="text" name="url" class="proxy" id="search" tag="searchbar" placeholder="Search the web!">
-          <script src="/uv/uv.bundle.js"></script>
-          <script src="/uv/uv.config.js"></script>
-          <script type="module" src="/assets/js/index.js"></script>
+          <script>
+            fdetkWriteScript("/uv/uv.bundle.js", "casual");
+            fdetkWriteScript("/uv/uv.config.js", "casual");
+            fdetkWriteScript("/assets/js/index.js", "casual", true);
+          </script>
         </form>
         <br>
     </div>
@@ -261,7 +272,7 @@
   });
 </script>
 </div>
-<script type="module" src="/assets/js/tabbed-browser.js?v=tabbed-workspace-12"></script>
+<script>fdetkWriteScript("/assets/js/tabbed-browser.js?v=tabbed-workspace-13", "tabbed", true);</script>
 </body>
 
 </html>

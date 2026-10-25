@@ -514,7 +514,7 @@ test("portal title defaults to wld al3m and honors a saved custom title", () => 
 });
 
 test("address bar submit handler routes the required input matrix once", async () => {
-  assert.match(homepageSource, /<script type="module" src="\/assets\/js\/index\.js"><\/script>/);
+  assert.match(homepageSource, /fdetkWriteScript\("\/assets\/js\/index\.js", "casual", true\)/);
 
   const cases = [
     ["example.com", "https://example.com/"],
@@ -709,4 +709,14 @@ test("new-tab shortcuts validate URLs, cap at six, and never expose internal pag
   assert.equal(mod.loadShortcuts(store).length, 0);
   store.setItem(mod.SHORTCUT_STORAGE_KEY, "not json");
   assert.ok(mod.loadShortcuts(store).length > 0);
+});
+
+test("startup loads only the selected interface's scripts and defaults to Casual", () => {
+  const firstDocument = homepageSource.split("</html>")[0];
+  assert.match(firstDocument, /mode === "tabbed" \? "tabbed" : "casual"/);
+  assert.doesNotMatch(firstDocument, /<script[^>]+src="\/assets\/js\/tabbed-browser\.js/);
+  assert.doesNotMatch(firstDocument, /<script[^>]+src="\/uv\/uv\.bundle\.js/);
+  assert.match(firstDocument, /fdetkWriteScript\("\/assets\/js\/tabbed-browser\.js[^"]*", "tabbed", true\)/);
+  assert.match(firstDocument, /fdetkWriteScript\("\/uv\/uv\.bundle\.js", "casual"\)/);
+  assert.equal((firstDocument.match(/fdetkInterface !== "tabbed"\) document\.write/g) || []).length, 3);
 });

@@ -392,16 +392,16 @@ export function mountTabbedBrowser() {
     settingsPage.append(renderPageHeading("Settings", "Personalize this workspace. Changes apply immediately."));
 
     const modeSection = element("section", "tabbed-settings-section");
-    modeSection.append(element("h2", "", "Interface mode"));
+    modeSection.append(element("h2", "", "Startup interface"));
     const modeSelect = element("select", "tabbed-settings-select");
-    modeSelect.setAttribute("aria-label", "Interface mode");
+    modeSelect.setAttribute("aria-label", "Startup interface");
     for (const [value, label] of [["tabbed", "Tabbed"], ["casual", "Casual"]]) {
       const option = element("option", "", label);
       option.value = value;
       modeSelect.append(option);
     }
     modeSelect.value = normalizeWorkspaceSettings(storage).mode;
-    const modeButton = element("button", "tabbed-settings-button", "Apply mode");
+    const modeButton = element("button", "tabbed-settings-button", "Save and switch");
     modeButton.type = "button";
     modeButton.addEventListener("click", () => {
       const mode = modeSelect.value === "casual" ? "casual" : "tabbed";

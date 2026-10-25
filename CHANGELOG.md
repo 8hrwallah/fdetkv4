@@ -1,5 +1,8 @@
 # Changelog
 
+- Startup: Casual is the default interface (no stored preference). Only the selected interface's scripts load: Tabbed no longer fetches UV, Casual search, app shortcuts or the ad scripts; Casual no longer fetches `tabbed-browser.js`, `scramjet-runtime.js` or `tabbed-shortcuts.js`. Ads are kept in Casual. This also removes duplicate `uv.bundle.js`/`index.js` requests.
+- Settings: the mode control is now "Startup interface" in both Casual Settings and Tabbed `fdetk://settings`; it persists in `localStorage.interfaceMode`.
+
 - Rebuilt the Tabbed new-tab page: centered search plus up to six user-managed shortcut tiles (add/edit/remove, http(s) validation, lazy favicons with letter fallback, persisted in `tabbedShortcuts`). Home/Games/Apps/Settings/About are no longer tiles; `fdetk://` routes are unchanged.
 - Fixed misplaced Tabbed blocks: the global `nav` rule in the Casual stylesheet was fixing Tabbed's `<nav>` link rows to the viewport; they are now plain containers, and new-tab controls are reset with low-specificity `:where()` rules.
 
