@@ -11,8 +11,8 @@ export const APP_SHORTCUTS = [
   { id: "geforce-now", name: "GeForce NOW", url: "https://play.geforcenow.com/", icon: "/assets/img/geforce.png" },
   { id: "discord", name: "Discord", url: "https://discord.com/login", icon: "/assets/img/discord.jpg" },
   { id: "tiktok", name: "TikTok", url: "https://www.tiktok.com/", icon: "/assets/img/tiktok.png" },
-  { id: "duckduckgo", name: "DuckDuckGo", url: "https://duckduckgo.com/", icon: "https://duckduckgo.com/favicon.ico" },
-  { id: "azgames", name: "Azgames.io", url: "https://azgames.io/", icon: "https://azgames.io/favicon.ico" },
+  { id: "duckduckgo", name: "DuckDuckGo", url: "https://duckduckgo.com/", icon: "/assets/img/duckduckgo.ico" },
+  { id: "azgames", name: "Azgames.io", url: "https://azgames.io/", icon: "/assets/img/azgames.ico" },
 ];
 
 export function getShortcutOrder(savedValue, items = APP_SHORTCUTS) {
