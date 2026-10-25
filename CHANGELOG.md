@@ -1,6 +1,21 @@
 # Changelog
 
+## 2026-10-25
+
+- Replaced the default Slope shortcut with TikTok and migrated the saved shortcut slot; TikTok continues through the normal Scramjet proxy navigation path.
+- Updated site branding and page titles to INSTA XC4RS / `wld al3m`; the saved tab-name preference now applies to Home and the proxy portal without replacing named-page titles.
+- Preserved the shortcut loop phase during resizing and pause/resume at page visibility changes.
+- Removed an Apps-page favicon handler that accessed a Settings-only input and threw when a custom favicon was saved.
+
 ## 2026-10-24
+
+- Added a compact, horizontally scrollable shortcut row below the home search field for YouTube, GeForce NOW, Discord, TikTok, DuckDuckGo, and Azgames.io. Shortcut destinations reuse the existing `openLink` routing behavior; the membership has no add control.
+- Shortcuts retain their order in local storage, support pointer and keyboard reordering, and use a drag threshold so ordinary clicks activate without a drag delay. Removed the home-page Version 2.0 label while preserving its background preference logic.
+- Added a seamless, reduced-motion-aware continuous rightward loop using non-focusable visual copies. Shortcut membership stays fixed; users can drag to reorder the listed shortcuts.
+- Routed GeForce NOW's `play.geforcenow.com` shortcut through the existing Scramjet proxy path; the separate NVIDIA-domain direct-navigation exception remains unchanged.
+- Replaced Slope with proxied TikTok in the default shortcuts and preserved the slot when migrating an existing saved order.
+- Applied the INSTA XC4RS branding and `wld al3m` page titles across site pages. The Settings title preference now affects Home and the proxy portal without overwriting page-specific titles.
+- Preserved continuous shortcut motion across viewport resizing by scaling the scroll phase, and suspend motion while the page is hidden.
 
 - Made Scramjet the default for new sessions and invalid saved engine values while preserving explicit Ultraviolet preferences; Titan still fails clearly instead of falling back.
 - Made DuckDuckGo the default search provider and added explicit URL-versus-search classification for domains, localhost ports, IPv4, and ordinary queries. Explicit HTTP remains HTTP; unsafe schemes and malformed hosts are rejected or searched rather than treated as proxy URLs.
@@ -31,5 +46,5 @@
 ## Existing functionality
 
 - Existing UV and Scramjet engines remain available and retain their existing URL formats and service-worker scopes.
-- The default engine remains Ultraviolet.
+- Scramjet is the default engine for new sessions; explicit Ultraviolet preferences remain supported.
 - Replit continues to use the Node 24 workspace configuration and the `start:snorlax` command.

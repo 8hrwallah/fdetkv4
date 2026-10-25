@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/assets/css/style.css" />
   <script src="/assets/js/functions.js"></script>
-  <title> burb </title>
+  <title>Burb | wld al3m</title>
   <meta property="og:image" content="/assets/img/newlogo.png">
 </head>
 <!-- Google tag (gtag.js) -->
@@ -22,7 +22,7 @@
 <body>
   <nav>
     <div class="heading">
-       <a href="https://discord.gg/Cqaa8x82Ch" class="headinglink" target="new">Snorlax's Cave</a>
+       <a href="https://discord.gg/Cqaa8x82Ch" class="headinglink" target="new">INSTA XC4RS</a>
     </div>
     <ul class="nav-links">
         <li><a href="/">Home</a></li>

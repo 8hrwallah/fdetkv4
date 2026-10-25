@@ -93,11 +93,6 @@ document.addEventListener('click', (event) => {
   function openLink(url) {
         const target = new URL(/^https?:\/\//i.test(url) ? url : 'https://' + url);
 
-        if (target.hostname === 'play.geforcenow.com') {
-            window.location.assign(target.href);
-            return;
-        }
-
         if (target.hostname === 'nvidia.com' || target.hostname.endsWith('.nvidia.com')) {
             window.location.assign(target.href);
             return;
@@ -137,8 +132,7 @@ document.addEventListener('click', (event) => {
       const input = document.getElementById('name');
       const newTabName = input.value;
   
-      document.title = newTabName;
-      localStorage.setItem('tabName', newTabName);
+      localStorage.setItem('tabName', newTabName.trim());
     }
 function cloak() {
     let url = window.location.href;

@@ -59,7 +59,7 @@ function showError(error) {
 
   const home = document.createElement("a");
   home.href = "/";
-  home.textContent = "Return to Snorlax's Cave";
+  home.textContent = "Return to INSTA XC4RS";
 
   status.append(title, detail, home);
   status.hidden = false;

@@ -24,9 +24,9 @@ The **Mockup API Sandbox** is a development platform designed to run an Express-
 * **Code Generation**: Orval (generates client endpoints from OpenAPI specifications)
 * **Bundler & Build Tooling**: esbuild (produces a unified CJS bundle), Vite (powers the mockup sandbox environment)
 
-# Snorlax's Cave
+# INSTA XC4RS
 
-Snorlax's Cave is a static game and proxy site served by the API server. The workspace uses pnpm and Node.js 24.
+INSTA XC4RS is a static game and proxy site served by the API server. The workspace uses pnpm and Node.js 24.
 * `artifacts/mockup-sandbox/` — Frontend workspace for sandbox interaction and visual testing.
 ## Run on Replit
 * `scripts/` — Infrastructure, environment configuration automation, and helper routines.

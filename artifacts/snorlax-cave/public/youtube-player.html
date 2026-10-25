@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer-when-downgrade" />
-    <title>YouTube Player | Snorlax's Cave</title>
+    <title>YouTube Player | wld al3m</title>
     <link rel="icon" href="/assets/img/newlogo.png" />
     <style>
       * { box-sizing: border-box; }
@@ -29,7 +29,7 @@
       const videoId = new URLSearchParams(location.search).get("video") || "";
       if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
         document.getElementById("player-shell").innerHTML =
-          '<p id="message">This YouTube link is invalid. Return to Snorlax’s Cave and try another link.</p>';
+          '<p id="message">This YouTube link is invalid. Return to INSTA XC4RS and try another link.</p>';
       } else {
         const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
         embedUrl.searchParams.set("rel", "0");

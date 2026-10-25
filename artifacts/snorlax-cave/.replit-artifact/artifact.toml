@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Snorlax's Cave"
+title = "INSTA XC4RS"
 description = "A browser-based learning and entertainment hub with games, apps, customizable settings, and an in-browser web proxy experience."
 version = "1.0.0"
 id = "artifacts/snorlax-cave"

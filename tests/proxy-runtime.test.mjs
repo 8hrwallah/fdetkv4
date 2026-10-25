@@ -4,6 +4,14 @@ import test from "node:test";
 import vm from "node:vm";
 import { resolveProxyEngine } from "../artifacts/snorlax-cave/public/assets/js/proxy-engine.js";
 import {
+  APP_SHORTCUTS,
+  advanceRightwardScroll,
+  getShortcutOrder,
+  moveShortcut,
+  preserveLoopPhase,
+} from "../artifacts/snorlax-cave/public/assets/js/app-shortcuts.js";
+import { resolvePortalTitle } from "../artifacts/snorlax-cave/public/assets/js/site-title.js";
+import {
   buildSearchUrl,
   isDuckDuckGoSearchUrl,
   resolveAddressInput,
@@ -189,6 +197,38 @@ test("new proxy navigations default to Scramjet and preserve explicit UV", async
   assert.equal(invalidPreference.values.get("proxyEngine"), "scramjet");
 });
 
+test("shortcut targets use the existing proxy route, including GeForce NOW", async () => {
+  const values = new Map();
+  const locations = [];
+  const sandbox = {
+    document: { addEventListener() {} },
+    localStorage: {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value),
+      removeItem: (key) => values.delete(key),
+    },
+    URL,
+    window: {
+      location: { href: "https://portal.example/", assign: (value) => locations.push(value) },
+    },
+    console,
+  };
+
+  vm.runInNewContext(functionsSource, sandbox);
+  for (const url of [
+    "https://discord.com/login",
+    "https://www.tiktok.com/",
+    "https://duckduckgo.com/",
+    "https://azgames.io/",
+    "https://play.geforcenow.com/",
+  ]) {
+    sandbox.openLink(url);
+    assert.equal(values.get("proxyTargetUrl"), url);
+    assert.deepEqual(locations, ["/portal"]);
+    locations.length = 0;
+  }
+});
+
 test("portal does not override native YouTube anchor click behavior", () => {
   assert.doesNotMatch(portalSource, /preventDefault|stopImmediatePropagation|keepYouTubeLinksInProxy/);
 });
@@ -233,6 +273,49 @@ test("address input distinguishes HTTP URLs from search terms and rejects unsafe
   assert.equal(resolveAddressInput(" \t "), null);
   assert.equal(isDuckDuckGoSearchUrl("https://duckduckgo.com/?q=proxy"), true);
   assert.equal(isDuckDuckGoSearchUrl("https://example.com/?q=proxy"), false);
+});
+
+test("fixed app shortcuts preserve valid saved order and move exactly one position", () => {
+  const ids = APP_SHORTCUTS.map((item) => item.id);
+  assert.deepEqual(
+    getShortcutOrder(JSON.stringify(["discord", "missing", "discord", 1])),
+    ["discord", ...ids.filter((id) => id !== "discord")],
+  );
+  assert.deepEqual(getShortcutOrder("{invalid"), ids);
+  assert.deepEqual(getShortcutOrder(JSON.stringify(["discord", "slope"])), ["discord", "tiktok", "youtube", "geforce-now", "duckduckgo", "azgames"]);
+  assert.deepEqual(ids, ["youtube", "geforce-now", "discord", "tiktok", "duckduckgo", "azgames"]);
+  assert.equal(APP_SHORTCUTS.find((item) => item.id === "geforce-now").url, "https://play.geforcenow.com/");
+  assert.equal(APP_SHORTCUTS.find((item) => item.id === "tiktok").url, "https://www.tiktok.com/");
+  assert.equal(APP_SHORTCUTS.find((item) => item.id === "duckduckgo").url, "https://duckduckgo.com/");
+  assert.equal(APP_SHORTCUTS.find((item) => item.id === "azgames").url, "https://azgames.io/");
+  assert.deepEqual(moveShortcut(["a", "b", "c", "d"], "b", 2), ["a", "c", "b", "d"]);
+  assert.deepEqual(moveShortcut(["a", "b", "c", "d"], "c", 0), ["c", "a", "b", "d"]);
+  assert.deepEqual(moveShortcut(["a", "b", "c", "d"], "b", 3), ["a", "c", "d", "b"]);
+});
+
+test("rightward shortcut motion wraps repeatedly without leaving the loop interval", () => {
+  const loopWidth = 490;
+  let position = loopWidth;
+  for (let index = 0; index < 10_000; index += 1) {
+    position = advanceRightwardScroll(position, 16, loopWidth);
+    assert.ok(position >= 0 && position < loopWidth);
+  }
+  assert.equal(advanceRightwardScroll(10, 1_000, loopWidth, 20), 480);
+  assert.equal(advanceRightwardScroll(10, 50_000, loopWidth, 20), 480);
+  assert.equal(advanceRightwardScroll(10, 1_000, 0), 0);
+});
+
+test("shortcut loop resizing preserves the current phase", () => {
+  assert.equal(preserveLoopPhase(250, 500, 800), 400);
+  assert.equal(preserveLoopPhase(0, 500, 800), 0);
+  assert.equal(preserveLoopPhase(525, 500, 800), 40);
+  assert.equal(preserveLoopPhase(250, 0, 800), 800);
+});
+
+test("portal title defaults to wld al3m and honors a saved custom title", () => {
+  assert.equal(resolvePortalTitle(null), "wld al3m");
+  assert.equal(resolvePortalTitle("   "), "wld al3m");
+  assert.equal(resolvePortalTitle(" My Portal "), "My Portal");
 });
 
 test("address bar submit handler routes the required input matrix once", async () => {
