@@ -56,7 +56,24 @@ server.on("request", (req, res) => {
 
 server.on("upgrade", (req, socket, head) => {
   if (req.url?.startsWith("/wisp/")) {
-    wispServer.routeRequest(req, socket, head);
+    const startedAt = Date.now();
+    const path = "/wisp/";
+    logger.info({ path, event: "websocket-upgrade" }, "Wisp transport upgrade requested");
+    socket.once("close", (hadError) => {
+      logger.info(
+        { path, event: "websocket-close", hadError, durationMs: Date.now() - startedAt },
+        "Wisp transport socket closed",
+      );
+    });
+    socket.on("error", (err) => {
+      logger.warn({ path, event: "websocket-error", code: "code" in err ? err.code : undefined }, "Wisp transport socket error");
+    });
+    try {
+      wispServer.routeRequest(req, socket, head);
+    } catch (err) {
+      logger.error({ path, event: "websocket-upgrade-error", err }, "Wisp transport upgrade failed");
+      socket.destroy();
+    }
     return;
   }
 

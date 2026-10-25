@@ -340,43 +340,113 @@ nav {
 }
 
 .app-shortcuts {
-  width: min(490px, calc(100vw - 32px));
-  margin: 8px auto 0;
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: min(540px, calc(100vw - 16px));
+  min-height: 80px;
+  margin: 16px auto 0;
+  padding: 0 46px;
   color: white;
   font-family: "Montserrat", sans-serif;
-  overflow: hidden;
+}
+
+.app-shortcuts::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.58);
+  clip-path: polygon(22px 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 22px 100%, 0 50%);
+  content: "";
 }
 
 .app-shortcuts-list {
+  min-width: 0;
   width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
+}
+
+.app-shortcuts-track {
+  display: flex;
+  width: max-content;
+  animation: app-shortcuts-marquee var(--shortcut-loop-duration, 30s) linear infinite;
+  will-change: transform;
+}
+
+.app-shortcuts-list.is-paused .app-shortcuts-track,
+.app-shortcuts-list.is-hidden .app-shortcuts-track {
+  animation-play-state: paused;
+}
+
+.app-shortcuts-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.app-shortcuts-arrow {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  display: grid;
+  width: 36px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: white;
+  font: inherit;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-shortcuts-arrow:hover,
+.app-shortcuts-arrow:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
+}
+
+.app-shortcuts-arrow:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 1px;
+}
+
+.app-shortcuts-arrow--previous {
+  left: 5px;
+}
+
+.app-shortcuts-arrow--next {
+  right: 5px;
+}
+
+@keyframes app-shortcuts-marquee {
+  to {
+    transform: translate3d(calc(-1 * var(--shortcut-loop-distance, 0px)), 0, 0);
+  }
+}
+
+.app-shortcuts-list {
   overflow-y: hidden;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  scroll-behavior: auto !important;
 }
 
 .app-shortcuts-list::-webkit-scrollbar {
   display: none;
 }
 
-.app-shortcuts-track,
-.app-shortcuts-group {
-  display: flex;
-  width: max-content;
-}
-
-.app-shortcuts-group {
-  flex: 0 0 auto;
-  gap: 6px;
-  padding: 2px 2px 5px;
-}
-
 .app-shortcut {
   position: relative;
   display: block;
-  flex: 0 0 76px;
-  width: 76px;
+  flex: 0 0 72px;
+  width: 72px;
   height: 54px;
   min-width: 0;
   padding: 0;
@@ -437,7 +507,25 @@ nav {
 
 @media (prefers-reduced-motion: reduce) {
   .app-shortcuts-list {
-    scroll-behavior: auto !important;
+    overflow-x: auto;
+  }
+
+  .app-shortcuts-track {
+    animation: none;
+    transform: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-shortcuts {
+    width: calc(100vw - 12px);
+    min-height: 76px;
+    padding: 0 36px;
+  }
+
+  .app-shortcuts-arrow {
+    width: 30px;
+    height: 32px;
   }
 }
 

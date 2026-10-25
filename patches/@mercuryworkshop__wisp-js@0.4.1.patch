@@ -1,0 +1,22 @@
+diff --git a/src/server/net.mjs b/src/server/net.mjs
+index 426329ab0d75b6b424f4e8afdc746e606ab14e61..79717c140e20977dece766b5a02e211b5840308e 100644
+--- a/src/server/net.mjs
++++ b/src/server/net.mjs
+@@ -168,3 +168,8 @@
+-    await new Promise((resolve) => {
+-      this.socket.write(data, resolve);
++    const socket = this.socket;
++    if (!socket || socket.destroyed || !socket.writable) {
++      logging.debug(`dropping queued data for closed TCP stream to ${this.hostname}:${this.port}`);
++      return;
++    }
++    await new Promise((resolve, reject) => {
++      socket.write(data, (error) => error ? reject(error) : resolve());
+-    });
++    });
+@@ -180 +186 @@
+-    if (this.data_queue.size >= this.data_queue.max_size) {
++    if (this.socket && this.data_queue.size >= this.data_queue.max_size) {
+       this.socket.pause();
+       this.paused = true;
+     }

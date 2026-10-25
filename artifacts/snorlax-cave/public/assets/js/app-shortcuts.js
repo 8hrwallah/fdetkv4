@@ -2,7 +2,9 @@ const ORDER_STORAGE_KEY = "snorlaxAppShortcuts";
 const DRAG_THRESHOLD = 6;
 const EDGE_SCROLL_SIZE = 28;
 const EDGE_SCROLL_SPEED = 180;
-const MOTION_SPEED = 18;
+const MOTION_SPEED = 36;
+const ARROW_PLAYBACK_RATE = 4;
+const SHORTCUT_STEP = 80;
 
 export const APP_SHORTCUTS = [
   { id: "youtube", name: "YouTube", url: "https://www.youtube.com/", icon: "/assets/img/youtube.png" },
@@ -50,8 +52,14 @@ export function preserveLoopPhase(scrollLeft, previousWidth, nextWidth) {
   return phase / previousWidth * nextWidth;
 }
 
+export function getMarqueeRepetitions(viewportWidth, sequenceWidth) {
+  if (sequenceWidth <= 0) return 2;
+  return Math.max(2, Math.ceil((Math.max(0, viewportWidth) + sequenceWidth) / sequenceWidth));
+}
+
 function reorderFromPointer(group, draggedButton, clientX) {
-  const siblings = [...group.querySelectorAll(".app-shortcut")].filter((button) => button !== draggedButton);
+  const siblings = [...group.querySelectorAll(".app-shortcut:not([data-visual-clone='true'])")]
+    .filter((button) => button !== draggedButton);
   const target = siblings.find((button) => clientX < button.getBoundingClientRect().left + button.getBoundingClientRect().width / 2);
   if (target) {
     if (draggedButton.nextElementSibling !== target) group.insertBefore(draggedButton, target);
@@ -63,11 +71,14 @@ function reorderFromPointer(group, draggedButton, clientX) {
 export function mountAppShortcuts() {
   if (typeof document === "undefined") return;
   const viewport = document.getElementById("app-shortcuts-list");
+  const section = document.getElementById("app-shortcuts");
+  const previousArrow = section?.querySelector(".app-shortcuts-arrow--previous");
+  const nextArrow = section?.querySelector(".app-shortcuts-arrow--next");
   const defaults = [...APP_SHORTCUTS];
   const items = defaults;
   const itemById = new Map(items.map((item) => [item.id, item]));
 
-  if (!viewport) return;
+  if (!viewport || !section || !previousArrow || !nextArrow) return;
 
   let savedValue = null;
   try {
@@ -79,10 +90,10 @@ export function mountAppShortcuts() {
   let groups = [];
   let loopWidth = 0;
   let dragState = null;
-  let animationFrame = 0;
   let dragFrame = 0;
-  let previousFrame = 0;
   let pointerX = 0;
+  let sequenceRepetitions = 0;
+  let arrowResetTimer = 0;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   const saveOrder = (nextOrder) => {
@@ -104,6 +115,11 @@ export function mountAppShortcuts() {
     button.draggable = false;
     button.tabIndex = visualClone ? -1 : 0;
 
+    if (visualClone) {
+      button.dataset.visualClone = "true";
+      button.setAttribute("aria-hidden", "true");
+    }
+
     if (item.icon) {
       const image = document.createElement("img");
       image.src = item.icon;
@@ -124,13 +140,10 @@ export function mountAppShortcuts() {
         window.openLink(item.url);
       });
       button.addEventListener("keydown", (event) => handleKeyboardMove(event, button, item));
-    } else {
-      button.setAttribute("aria-hidden", "true");
-      button.addEventListener("click", () => window.openLink(item.url));
     }
 
     button.addEventListener("pointerdown", (event) => {
-      if (!event.isPrimary || event.button !== 0) return;
+      if (visualClone || !event.isPrimary || event.button !== 0) return;
       const group = button.closest(".app-shortcuts-group");
       dragState = {
         button,
@@ -173,55 +186,109 @@ export function mountAppShortcuts() {
   };
 
   function renderGroups(scrollToMain = false) {
+    const focusedId = viewport.contains(document.activeElement)
+      ? document.activeElement.dataset.shortcutId
+      : null;
+    const previousTrack = viewport.firstElementChild;
+    const previousAnimation = previousTrack?.getAnimations()[0];
+    const previousDuration = previousAnimation?.effect?.getTiming().duration;
+    const previousTime = previousAnimation?.currentTime;
+    const previousPhase = typeof previousDuration === "number" && previousDuration > 0
+      && typeof previousTime === "number"
+      ? (previousTime % previousDuration) / previousDuration
+      : 0;
     const previousWidth = loopWidth;
-    const previousPosition = viewport.scrollLeft;
     const track = document.createElement("div");
     track.className = "app-shortcuts-track";
     const orderedItems = order.map((id) => itemById.get(id)).filter(Boolean);
     groups = [];
 
-    for (let groupIndex = 0; groupIndex < 3; groupIndex += 1) {
+    sequenceRepetitions = getMarqueeRepetitions(viewport.clientWidth, items.length * SHORTCUT_STEP);
+    for (let groupIndex = 0; groupIndex < 2; groupIndex += 1) {
       const group = document.createElement("div");
       group.className = "app-shortcuts-group";
-      group.setAttribute("role", "list");
-      group.setAttribute("aria-label", groupIndex === 1 ? "App shortcuts" : "");
-      const clone = groupIndex !== 1;
-      if (clone) {
+      if (groupIndex === 0) {
+        group.setAttribute("role", "list");
+        group.setAttribute("aria-label", "App shortcuts");
+      } else {
         group.setAttribute("aria-hidden", "true");
       }
-      for (const item of orderedItems) group.append(makeButton(item, clone));
+      for (let repetition = 0; repetition < sequenceRepetitions; repetition += 1) {
+        for (const item of orderedItems) {
+          group.append(makeButton(item, groupIndex !== 0 || repetition !== 0));
+        }
+      }
       groups.push(group);
       track.append(group);
     }
 
     viewport.replaceChildren(track);
     loopWidth = groups[0]?.getBoundingClientRect().width || 0;
-    viewport.scrollLeft = scrollToMain
-      ? loopWidth
-      : preserveLoopPhase(previousPosition, previousWidth, loopWidth);
+    track.style.setProperty("--shortcut-loop-distance", `${loopWidth}px`);
+    track.style.setProperty("--shortcut-loop-duration", `${loopWidth / MOTION_SPEED}s`);
+    const animation = track.getAnimations()[0];
+    if (animation && !scrollToMain && typeof animation.effect?.getTiming().duration === "number") {
+      animation.currentTime = previousPhase * Number(animation.effect.getTiming().duration);
+    }
+    if (focusedId) {
+      const focusedButton = groups[0].querySelector(`[data-shortcut-id="${CSS.escape(focusedId)}"]`);
+      focusedButton?.focus();
+    }
+    if (previousWidth !== loopWidth) resetArrowMotion();
   }
 
-  const pauseMotion = () => {
-    if (animationFrame) cancelAnimationFrame(animationFrame);
-    animationFrame = 0;
-    previousFrame = 0;
+  const getTrackAnimation = () => viewport.firstElementChild?.getAnimations()[0];
+
+  const resetArrowMotion = () => {
+    const animation = getTrackAnimation();
+    if (animation) animation.updatePlaybackRate(1);
+    section.dataset.accelerating = "";
+    if (arrowResetTimer) window.clearTimeout(arrowResetTimer);
+    arrowResetTimer = 0;
   };
 
-  const animate = (time) => {
-    animationFrame = 0;
-    if (reducedMotion.matches || dragState || viewport.contains(document.activeElement) || loopWidth <= 0) return;
-    if (previousFrame) {
-      const elapsed = time - previousFrame;
-      viewport.scrollLeft = advanceRightwardScroll(viewport.scrollLeft, elapsed, loopWidth);
-    }
-    previousFrame = time;
-    animationFrame = requestAnimationFrame(animate);
+  const pauseMotion = () => {
+    viewport.classList.add("is-paused");
   };
 
   const resumeMotion = () => {
-    if (reducedMotion.matches || dragState || viewport.contains(document.activeElement) || animationFrame) return;
-    previousFrame = 0;
-    animationFrame = requestAnimationFrame(animate);
+    viewport.classList.remove("is-paused");
+  };
+
+  const moveWithArrow = (direction, held) => {
+    if (reducedMotion.matches) {
+      viewport.scrollBy({
+        left: (direction === "left" ? -1 : 1) * SHORTCUT_STEP,
+        behavior: "instant",
+      });
+      return;
+    }
+    const animation = getTrackAnimation();
+    if (!animation) return;
+    const rate = direction === "left" ? ARROW_PLAYBACK_RATE : -ARROW_PLAYBACK_RATE;
+    animation.updatePlaybackRate(held ? rate : 1);
+    section.dataset.accelerating = held ? direction : "";
+  };
+
+  const bindArrow = (button, direction) => {
+    button.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      if (arrowResetTimer) window.clearTimeout(arrowResetTimer);
+      arrowResetTimer = 0;
+      moveWithArrow(direction, true);
+    });
+    for (const eventName of ["pointerup", "pointercancel", "pointerleave", "blur"]) {
+      button.addEventListener(eventName, () => moveWithArrow(direction, false));
+    }
+    button.addEventListener("click", (event) => {
+      if (event.detail !== 0) return;
+      if (reducedMotion.matches) {
+        moveWithArrow(direction, false);
+        return;
+      }
+      moveWithArrow(direction, true);
+      arrowResetTimer = window.setTimeout(resetArrowMotion, 550);
+    });
   };
 
   const autoScrollDuringDrag = () => {
@@ -258,7 +325,8 @@ export function mountAppShortcuts() {
     if (dragFrame) cancelAnimationFrame(dragFrame);
     dragFrame = 0;
     if (moved) {
-      const next = [...group.querySelectorAll(".app-shortcut")].map((entry) => entry.dataset.shortcutId);
+      const next = [...group.querySelectorAll(".app-shortcut:not([data-visual-clone='true'])")]
+        .map((entry) => entry.dataset.shortcutId);
       button.dataset.suppressClick = "true";
       saveOrder(next);
       renderGroups();
@@ -280,23 +348,20 @@ export function mountAppShortcuts() {
 
   viewport.addEventListener("focusin", pauseMotion);
   viewport.addEventListener("focusout", () => window.setTimeout(resumeMotion, 0));
-  viewport.addEventListener("wheel", () => {
-    if (dragState) return;
-    pauseMotion();
-    window.setTimeout(resumeMotion, 1200);
-  }, { passive: true });
-  reducedMotion.addEventListener("change", () => reducedMotion.matches ? pauseMotion() : resumeMotion());
-  document.addEventListener("visibilitychange", () => document.hidden ? pauseMotion() : resumeMotion());
-  window.addEventListener("resize", () => {
-    const previousWidth = loopWidth;
-    loopWidth = groups[0]?.getBoundingClientRect().width || 0;
-    if (previousWidth && loopWidth) {
-      viewport.scrollLeft = preserveLoopPhase(viewport.scrollLeft, previousWidth, loopWidth);
-    }
+  reducedMotion.addEventListener("change", resetArrowMotion);
+  document.addEventListener("visibilitychange", () => {
+    viewport.classList.toggle("is-hidden", document.hidden);
   });
+  bindArrow(previousArrow, "left");
+  bindArrow(nextArrow, "right");
 
   renderGroups(true);
   resumeMotion();
+  const resizeObserver = new ResizeObserver(() => {
+    const nextRepetitions = getMarqueeRepetitions(viewport.clientWidth, items.length * SHORTCUT_STEP);
+    if (nextRepetitions !== sequenceRepetitions) renderGroups();
+  });
+  resizeObserver.observe(viewport);
 }
 
 mountAppShortcuts();

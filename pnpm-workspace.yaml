@@ -149,3 +149,6 @@ allowBuilds:
   '@mercuryworkshop/scramjet': false
   bufferutil: true
   esbuild: true
+
+patchedDependencies:
+  '@mercuryworkshop/wisp-js@0.4.1': patches/@mercuryworkshop__wisp-js@0.4.1.patch

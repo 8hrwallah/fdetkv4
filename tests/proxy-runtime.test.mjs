@@ -6,10 +6,12 @@ import { resolveProxyEngine } from "../artifacts/snorlax-cave/public/assets/js/p
 import {
   APP_SHORTCUTS,
   advanceRightwardScroll,
+  getMarqueeRepetitions,
   getShortcutOrder,
   moveShortcut,
   preserveLoopPhase,
 } from "../artifacts/snorlax-cave/public/assets/js/app-shortcuts.js";
+import { NodeTCPSocket } from "../artifacts/api-server/node_modules/@mercuryworkshop/wisp-js/src/server/net.mjs";
 import { resolvePortalTitle } from "../artifacts/snorlax-cave/public/assets/js/site-title.js";
 import {
   buildSearchUrl,
@@ -35,6 +37,10 @@ const addressBarSource = await readFile(
 );
 const homepageSource = await readFile(
   new URL("../artifacts/snorlax-cave/index.html", import.meta.url),
+  "utf8",
+);
+const shortcutStyles = await readFile(
+  new URL("../artifacts/snorlax-cave/public/assets/css/style.css", import.meta.url),
   "utf8",
 );
 
@@ -310,6 +316,51 @@ test("shortcut loop resizing preserves the current phase", () => {
   assert.equal(preserveLoopPhase(0, 500, 800), 0);
   assert.equal(preserveLoopPhase(525, 500, 800), 40);
   assert.equal(preserveLoopPhase(250, 0, 800), 800);
+});
+
+test("shortcut marquee repeats enough content to cover desktop and mobile viewports", () => {
+  for (const viewportWidth of [320, 490, 920, 1440]) {
+    const sequenceWidth = 6 * 80;
+    const repetitions = getMarqueeRepetitions(viewportWidth, sequenceWidth);
+    assert.ok(repetitions * sequenceWidth >= viewportWidth + sequenceWidth);
+  }
+  assert.match(homepageSource, /aria-label="Move shortcuts left"/);
+  assert.match(homepageSource, /aria-label="Move shortcuts right"/);
+  assert.match(shortcutStyles, /@keyframes app-shortcuts-marquee/);
+  assert.match(shortcutStyles, /prefers-reduced-motion: reduce/);
+});
+
+test("Wisp TCP writes tolerate a socket closed while queued data is pending", async () => {
+  const socket = Object.create(NodeTCPSocket.prototype);
+  socket.hostname = "ads.example";
+  socket.port = 443;
+  let writes = 0;
+  socket.socket = {
+    destroyed: false,
+    writable: true,
+    write(_data, callback) {
+      writes += 1;
+      callback();
+    },
+  };
+
+  await socket.send(Buffer.from("pending"));
+  assert.equal(writes, 1);
+  socket.socket = null;
+  await assert.doesNotReject(() => socket.send(Buffer.from("closed")));
+  assert.equal(writes, 1);
+
+  socket.data_queue = { size: 128, max_size: 128 };
+  assert.doesNotThrow(() => socket.pause());
+
+  socket.socket = {
+    destroyed: false,
+    writable: true,
+    write(_data, callback) {
+      callback(new Error("socket closed during write"));
+    },
+  };
+  await assert.rejects(() => socket.send(Buffer.from("failed")), /socket closed during write/);
 });
 
 test("portal title defaults to wld al3m and honors a saved custom title", () => {
