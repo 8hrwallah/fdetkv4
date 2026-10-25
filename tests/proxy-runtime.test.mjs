@@ -687,3 +687,26 @@ test("Tabbed embedded-page theming cannot restyle the Casual document", async ()
   assert.ok(selectors.length > 0);
   for (const selector of selectors) assert.match(selector, /data-tabbed-embed/);
 });
+
+test("new-tab shortcuts validate URLs, cap at six, and never expose internal pages", async () => {
+  const mod = await import("../artifacts/snorlax-cave/public/assets/js/tabbed-shortcuts.js");
+  assert.equal(mod.normalizeShortcutUrl("example.com"), "https://example.com/");
+  assert.equal(mod.normalizeShortcutUrl("http://example.com/a"), "http://example.com/a");
+  for (const bad of ["javascript:alert(1)", "data:text/html,x", "fdetk://settings", "ftp://x.com", "a b.com", "", "localnamewithoutdot", "https://u:p@example.com"]) {
+    assert.equal(mod.normalizeShortcutUrl(bad), null, bad);
+  }
+  assert.ok(mod.validateShortcut({ name: "", url: "example.com" }).error);
+  assert.ok(mod.validateShortcut({ name: "x".repeat(25), url: "example.com" }).error);
+  assert.deepEqual(mod.validateShortcut({ name: " A  b ", url: "example.com" }).value, { name: "A b", url: "https://example.com/" });
+  const data = new Map();
+  const store = { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) };
+  const defaults = mod.loadShortcuts(store);
+  assert.ok(defaults.length > 0 && defaults.length <= mod.MAX_SHORTCUTS);
+  assert.ok(defaults.every((item) => item.id && /^https?:/.test(item.url)));
+  store.setItem(mod.SHORTCUT_STORAGE_KEY, JSON.stringify(Array.from({ length: 9 }, (_, i) => ({ id: `i${i}`, name: `S${i}`, url: `https://s${i}.com` }))));
+  assert.equal(mod.loadShortcuts(store).length, 6);
+  store.setItem(mod.SHORTCUT_STORAGE_KEY, "[]");
+  assert.equal(mod.loadShortcuts(store).length, 0);
+  store.setItem(mod.SHORTCUT_STORAGE_KEY, "not json");
+  assert.ok(mod.loadShortcuts(store).length > 0);
+});

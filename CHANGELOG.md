@@ -1,5 +1,8 @@
 # Changelog
 
+- Rebuilt the Tabbed new-tab page: centered search plus up to six user-managed shortcut tiles (add/edit/remove, http(s) validation, lazy favicons with letter fallback, persisted in `tabbedShortcuts`). Home/Games/Apps/Settings/About are no longer tiles; `fdetk://` routes are unchanged.
+- Fixed misplaced Tabbed blocks: the global `nav` rule in the Casual stylesheet was fixing Tabbed's `<nav>` link rows to the viewport; they are now plain containers, and new-tab controls are reset with low-specificity `:where()` rules.
+
 - Fixed Casual mode turning black: embedded-catalog theming rules matched every page through `html[data-tabbed-theme]`, overriding the body background; they are now scoped to `html[data-tabbed-embed]`, which only Tabbed's internal frames set.
 - Renamed app-defined internal routes from `chrome://` to `fdetk://`.
 

@@ -82,83 +82,6 @@
   background: var(--tb-bg);
 }
 
-.tabbed-home {
-  display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: clamp(22px, 5vh, 52px) 20px;
-  text-align: center;
-}
-
-.tabbed-home-mark,
-.tabbed-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid var(--tb-border);
-  border-radius: 11px;
-  color: var(--tb-accent);
-  background: var(--tb-surface);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.tabbed-home-eyebrow {
-  margin-top: 5px;
-  color: var(--tb-accent);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-}
-
-.tabbed-home h1 {
-  color: var(--tb-text);
-  font-size: clamp(23px, 3vw, 32px);
-  font-weight: 600;
-  letter-spacing: -0.6px;
-}
-
-.tabbed-home-search {
-  display: flex;
-  width: min(100%, 620px);
-  min-height: 48px;
-  gap: 7px;
-  margin: 14px 0 21px;
-  padding: 5px;
-  border: 1px solid var(--tb-border);
-  border-radius: 11px;
-  background: var(--tb-surface);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.tabbed-home-search:focus-within {
-  border-color: var(--tb-accent);
-  box-shadow: 0 0 0 3px var(--tb-accent-soft);
-}
-
-.tabbed-home-search input {
-  width: 100%;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border: 0;
-  outline: 0;
-  color: var(--tb-text);
-  background: transparent;
-  font: inherit;
-  font-size: 14px;
-  text-align: left;
-}
-
-.tabbed-home-search input::placeholder {
-  color: var(--tb-muted);
-}
-
-.tabbed-home-search button,
 .tabbed-settings-button {
   min-width: 76px;
   height: 38px;
@@ -173,14 +96,12 @@
   cursor: pointer;
 }
 
-.tabbed-home-search button:hover,
 .tabbed-settings-button:hover {
   filter: brightness(1.12);
 }
 
 .tabbed-shortcut-grid {
   display: grid;
-  width: min(100%, 680px);
   grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
   gap: 9px;
 }
@@ -532,19 +453,6 @@ html[data-tabbed-embed] .about {
 }
 
 @media (max-width: 600px) {
-  .tabbed-home {
-    justify-content: flex-start;
-    padding-top: clamp(40px, 12vh, 100px);
-  }
-
-  .tabbed-home-search {
-    margin: 10px 0 16px;
-  }
-
-  .tabbed-shortcut-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .tabbed-shortcut {
     min-height: 52px;
     gap: 8px;
@@ -573,5 +481,250 @@ html[data-tabbed-embed] .about {
   .tabbed-tab.is-loading .tabbed-tab-title::after {
     transition: none;
     animation: none;
+  }
+}
+
+/* New-tab page. Buttons and inputs are reset explicitly because the Casual
+   stylesheet defines global button/input/p rules. */
+.ntp {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 32px 20px 72px;
+  color: var(--tb-text);
+}
+
+.ntp-brand {
+  color: var(--tb-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+}
+
+.ntp-search {
+  width: min(100%, 584px);
+}
+
+.ntp-search input,
+.ntp-form input {
+  display: block;
+  width: 100%;
+  height: 46px;
+  padding: 0 20px;
+  border: 1px solid var(--tb-border);
+  border-radius: 24px;
+  outline: 0;
+  color: var(--tb-text);
+  background: var(--tb-surface);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+}
+
+.ntp-search input:hover,
+.ntp-search input:focus {
+  color: var(--tb-text);
+  background: var(--tb-surface);
+  border-color: var(--tb-accent);
+}
+
+.ntp-search input:focus {
+  box-shadow: 0 0 0 3px var(--tb-accent-soft);
+}
+
+.ntp-search input::placeholder,
+.ntp-form input::placeholder {
+  color: var(--tb-muted);
+}
+
+.ntp-shortcuts {
+  display: grid;
+  width: min(100%, 660px);
+  grid-template-columns: repeat(auto-fit, 96px);
+  justify-content: center;
+  gap: 12px 16px;
+}
+
+.ntp-tile {
+  position: relative;
+  width: 96px;
+}
+
+/* :where keeps this reset below the component rules that follow. */
+:where(.ntp) button {
+  width: auto;
+  height: auto;
+  border: 0;
+  border-radius: 8px;
+  color: var(--tb-text);
+  background: transparent;
+  font: inherit;
+  transition: none;
+}
+
+.ntp-open,
+.ntp-add {
+  display: flex;
+  width: 96px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px 8px;
+  cursor: pointer;
+}
+
+.ntp-open:hover,
+.ntp-add:hover,
+.ntp-edit:hover {
+  color: var(--tb-text);
+  background: var(--tb-raised);
+}
+
+.ntp-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: var(--tb-accent);
+  background: var(--tb-surface);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ntp-icon img {
+  grid-area: 1 / 1;
+  width: 24px;
+  height: 24px;
+  background: var(--tb-surface);
+}
+
+.ntp-icon.has-image {
+  font-size: 0;
+}
+
+.ntp-icon--add {
+  border: 1px dashed var(--tb-border);
+  background: transparent;
+  color: var(--tb-muted);
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.ntp-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ntp-add .ntp-name {
+  color: var(--tb-muted);
+}
+
+.ntp-edit {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--tb-muted);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ntp-tile:hover .ntp-edit,
+.ntp-edit:focus-visible {
+  opacity: 1;
+}
+
+.ntp-form {
+  display: grid;
+  width: min(100%, 360px);
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--tb-border);
+  border-radius: 12px;
+  background: var(--tb-surface);
+}
+
+.ntp-form[hidden] {
+  display: none;
+}
+
+.ntp-form input {
+  height: 38px;
+  border-radius: 8px;
+  background: var(--tb-bg);
+  font-size: 13px;
+}
+
+.ntp-form input:focus {
+  border-color: var(--tb-accent);
+}
+
+.ntp-form-error {
+  min-height: 0;
+  margin: 0;
+  color: #ffb4bb;
+  font-size: 12px;
+}
+
+.ntp-form-error:empty {
+  display: none;
+}
+
+.ntp-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ntp-form-actions button {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--tb-border);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ntp-form-actions .ntp-save {
+  border-color: var(--tb-accent);
+  background: var(--tb-accent-soft);
+}
+
+.ntp-form-actions .ntp-remove {
+  margin-left: auto;
+}
+
+.ntp-form-actions [hidden] {
+  display: none;
+}
+
+@media (hover: none) {
+  .ntp-edit {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .ntp {
+    justify-content: flex-start;
+    gap: 22px;
+    padding-top: clamp(32px, 10vh, 80px);
+  }
+
+  .ntp-shortcuts {
+    grid-template-columns: repeat(3, 96px);
   }
 }

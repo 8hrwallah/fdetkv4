@@ -1,4 +1,5 @@
 import { resolveAddressInput } from "./search.js";
+import { MAX_SHORTCUTS, createShortcutId, loadShortcuts, saveShortcuts, shortcutIconUrl, validateShortcut } from "./tabbed-shortcuts.js?v=1";
 import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-1";
 
 const themes = new Set(["midnight", "obsidian", "slate", "light"]);
@@ -160,7 +161,7 @@ function applyInternalFrameTheme(frame, workspace) {
     const stylesheet = internalDocument.createElement("link");
     stylesheet.id = "tabbed-internal-style";
     stylesheet.rel = "stylesheet";
-    stylesheet.href = "/assets/css/tabbed-internal.css?v=4";
+    stylesheet.href = "/assets/css/tabbed-internal.css?v=8";
     internalDocument.head.append(stylesheet);
   }
   frame.contentWindow.openLink = (url) => navigateInternalFrameLink(frame, url);
@@ -184,6 +185,7 @@ export function mountTabbedBrowser() {
   if (!tabsElement || !pagesElement || !address || !addressForm || !newTabButton) return;
 
   const storage = getLocalStorage();
+  const shortcuts = loadShortcuts(storage);
   const settings = normalizeWorkspaceSettings(storage);
   document.documentElement.dataset.interfaceMode = settings.mode;
   document.documentElement.dataset.tabbedTheme = settings.theme;
@@ -212,33 +214,176 @@ export function mountTabbedBrowser() {
   }
 
   function renderHome(tab) {
-    const home = element("div", "tabbed-home");
-    const searchForm = element("form", "tabbed-home-search");
+    const home = element("div", "ntp");
+    const brand = element("div", "ntp-brand", "INSTA XC4RS");
+    const searchForm = element("form", "ntp-search");
     searchForm.setAttribute("role", "search");
     const search = element("input", "");
     search.type = "search";
     search.placeholder = "Search the web or enter an address";
     search.setAttribute("aria-label", "Search or enter a web address");
     search.autocomplete = "off";
-    const submit = element("button", "", "Search");
-    submit.type = "submit";
-    searchForm.append(search, submit);
+    searchForm.append(search);
     searchForm.addEventListener("submit", (event) => {
       event.preventDefault();
       navigate(tab, search.value);
     });
-    home.append(
-      element("div", "tabbed-home-mark", "XC"),
-      element("p", "tabbed-home-eyebrow", "INSTA XC4RS"),
-      element("h1", "", "Where to next?"),
-      searchForm,
-    );
-    const grid = element("nav", "tabbed-shortcut-grid");
-    grid.setAttribute("aria-label", "Workspace shortcuts");
-    for (const page of shortcutPages) {
-      grid.append(createWorkspaceLink(tab, navigate, page.route, page.name));
-    }
-    home.append(grid);
+
+    const grid = element("div", "ntp-shortcuts");
+    grid.setAttribute("role", "list");
+    grid.setAttribute("aria-label", "Shortcuts");
+    const form = element("form", "ntp-form");
+    form.hidden = true;
+    form.noValidate = true;
+    const nameInput = element("input", "");
+    nameInput.name = "name";
+    nameInput.maxLength = 24;
+    nameInput.placeholder = "Name";
+    nameInput.setAttribute("aria-label", "Shortcut name");
+    const urlInput = element("input", "");
+    urlInput.name = "url";
+    urlInput.placeholder = "example.com";
+    urlInput.setAttribute("aria-label", "Shortcut address");
+    urlInput.autocomplete = "off";
+    const formError = element("p", "ntp-form-error");
+    formError.setAttribute("role", "alert");
+    const save = element("button", "ntp-save", "Save");
+    save.type = "submit";
+    const cancel = element("button", "ntp-cancel", "Cancel");
+    cancel.type = "button";
+    cancel.dataset.action = "cancel";
+    const remove = element("button", "ntp-remove", "Remove");
+    remove.type = "button";
+    remove.dataset.action = "remove";
+    const actions = element("div", "ntp-form-actions");
+    actions.append(save, cancel, remove);
+    form.append(nameInput, urlInput, formError, actions);
+    let editingId = null;
+
+    const closeForm = () => {
+      editingId = null;
+      form.hidden = true;
+      formError.textContent = "";
+    };
+    const openForm = (id) => {
+      const item = shortcuts.find((entry) => entry.id === id);
+      editingId = item ? id : "";
+      nameInput.value = item?.name || "";
+      urlInput.value = item?.url || "";
+      remove.hidden = !item;
+      formError.textContent = "";
+      form.hidden = false;
+      nameInput.focus();
+    };
+    const persist = () => {
+      try {
+        saveShortcuts(storage, shortcuts);
+        return true;
+      } catch (error) {
+        formError.textContent = `Could not save shortcuts: ${error instanceof Error ? error.message : String(error)}`;
+        return false;
+      }
+    };
+
+    const paint = () => {
+      const fragment = document.createDocumentFragment();
+      for (const item of shortcuts) {
+        const tile = element("div", "ntp-tile");
+        tile.setAttribute("role", "listitem");
+        const open = element("button", "ntp-open");
+        open.type = "button";
+        open.dataset.action = "open";
+        open.dataset.id = item.id;
+        open.title = item.url;
+        const icon = element("span", "ntp-icon", item.name.charAt(0).toUpperCase());
+        const iconUrl = shortcutIconUrl(item.url);
+        if (iconUrl) {
+          const image = document.createElement("img");
+          image.alt = "";
+          image.loading = "lazy";
+          image.decoding = "async";
+          image.width = 24;
+          image.height = 24;
+          image.referrerPolicy = "no-referrer";
+          image.addEventListener("error", () => image.remove(), { once: true });
+          image.addEventListener("load", () => icon.classList.add("has-image"), { once: true });
+          image.src = iconUrl;
+          icon.append(image);
+        }
+        open.append(icon, element("span", "ntp-name", item.name));
+        const edit = element("button", "ntp-edit", "⋯");
+        edit.type = "button";
+        edit.dataset.action = "edit";
+        edit.dataset.id = item.id;
+        edit.setAttribute("aria-label", `Edit ${item.name}`);
+        edit.title = "Edit shortcut";
+        tile.append(open, edit);
+        fragment.append(tile);
+      }
+      if (shortcuts.length < MAX_SHORTCUTS) {
+        const add = element("button", "ntp-add");
+        add.type = "button";
+        add.dataset.action = "add";
+        add.setAttribute("role", "listitem");
+        add.setAttribute("aria-label", "Add shortcut");
+        add.append(element("span", "ntp-icon ntp-icon--add", "+"), element("span", "ntp-name", "Add"));
+        fragment.append(add);
+      }
+      grid.replaceChildren(fragment);
+    };
+
+    grid.addEventListener("click", (event) => {
+      const target = event.target.closest?.("[data-action]");
+      if (!target) return;
+      const { action, id } = target.dataset;
+      if (action === "open") {
+        const item = shortcuts.find((entry) => entry.id === id);
+        if (item) navigate(tab, item.url);
+      } else if (action === "edit") {
+        openForm(id);
+      } else if (action === "add") {
+        openForm("");
+      }
+    });
+    form.addEventListener("click", (event) => {
+      const action = event.target.closest?.("[data-action]")?.dataset.action;
+      if (action === "cancel") closeForm();
+      if (action === "remove" && editingId) {
+        const index = shortcuts.findIndex((entry) => entry.id === editingId);
+        if (index >= 0) shortcuts.splice(index, 1);
+        if (persist()) {
+          closeForm();
+          paint();
+        }
+      }
+    });
+    form.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeForm();
+    });
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const checked = validateShortcut({ name: nameInput.value, url: urlInput.value });
+      if (checked.error) {
+        formError.textContent = checked.error;
+        return;
+      }
+      const existing = shortcuts.find((entry) => entry.id === editingId);
+      if (existing) {
+        Object.assign(existing, checked.value);
+      } else if (shortcuts.length < MAX_SHORTCUTS) {
+        shortcuts.push({ id: createShortcutId(), ...checked.value });
+      } else {
+        formError.textContent = `You can keep up to ${MAX_SHORTCUTS} shortcuts.`;
+        return;
+      }
+      if (persist()) {
+        closeForm();
+        paint();
+      }
+    });
+
+    paint();
+    home.append(brand, searchForm, grid, form);
     return home;
   }
 
@@ -341,7 +486,9 @@ export function mountTabbedBrowser() {
       element("p", "", "Tabs share this site’s proxy session, cookies, storage and service worker. They are not separate browser profiles."),
     );
     about.append(card);
-    const links = element("nav", "tabbed-shortcut-grid");
+    // A div avoids the global `nav` rule that fixes bare <nav> elements to the viewport.
+    const links = element("div", "tabbed-shortcut-grid");
+    links.setAttribute("role", "navigation");
     links.setAttribute("aria-label", "About page links");
     for (const page of shortcutPages.filter((item) => ["games", "apps", "settings"].includes(item.route))) {
       links.append(createWorkspaceLink(tab, navigate, page.route, page.name));
