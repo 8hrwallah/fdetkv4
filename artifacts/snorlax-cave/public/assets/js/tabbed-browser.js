@@ -3,9 +3,35 @@ import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-1"
 
 const themes = new Set(["midnight", "obsidian", "slate", "light"]);
 const accents = new Set(["violet", "ice", "silver"]);
-const sites = [
-  { name: "Discord", url: "https://discord.com/login" },
-  { name: "Wikipedia", url: "https://www.wikipedia.org/" },
+const internalRoutes = new Map([
+  ["home", "fdetk://home"],
+  ["settings", "fdetk://settings"],
+  ["about", "fdetk://about"],
+  ["games", "fdetk://games"],
+  ["apps", "fdetk://apps"],
+]);
+const firstPartyRoutes = new Map([
+  ["/", "home"],
+  ["/index.html", "home"],
+  ["/settings", "settings"],
+  ["/Settings.html", "settings"],
+  ["/about", "about"],
+  ["/About.html", "about"],
+  ["/math", "games"],
+  ["/Games.html", "games"],
+  ["/english", "apps"],
+  ["/Apps.html", "apps"],
+]);
+const routeSources = {
+  games: "/Games.html",
+  apps: "/Apps.html",
+};
+const shortcutPages = [
+  { route: "home", name: "Home", mark: "⌂" },
+  { route: "games", name: "Games", mark: "▦" },
+  { route: "apps", name: "Apps", mark: "◫" },
+  { route: "settings", name: "Settings", mark: "⚙" },
+  { route: "about", name: "About", mark: "i" },
 ];
 
 export function normalizeWorkspaceSettings(storage) {
@@ -32,6 +58,34 @@ export function resolveWorkspaceAddress(value, searchEngine = "duckduckgo", base
     throw new Error("Only HTTP and HTTPS addresses can be opened.");
   }
   return url.href;
+}
+
+export function resolveWorkspaceNavigation(value, searchEngine = "duckduckgo", baseUrl = location.href) {
+  const input = String(value ?? "").trim();
+  const internalAddress = input.match(/^fdetk:\/\/([^/?#]+)\/?$/i);
+  if (input.toLowerCase().startsWith("fdetk://")) {
+    const route = internalAddress?.[1]?.toLowerCase();
+    return {
+      type: "internal",
+      route: internalRoutes.has(route) ? route : "not-found",
+      address: route && internalRoutes.has(route) ? internalRoutes.get(route) : `fdetk://${route || "not-found"}`,
+    };
+  }
+
+  try {
+    const url = new URL(input, baseUrl);
+    if (url.origin === new URL(baseUrl).origin && firstPartyRoutes.has(url.pathname)) {
+      const route = firstPartyRoutes.get(url.pathname);
+      return { type: "internal", route, address: internalRoutes.get(route) };
+    }
+  } catch {
+    // Address parsing below provides the user-facing invalid URL error.
+  }
+
+  return {
+    type: "web",
+    address: resolveWorkspaceAddress(input, searchEngine, baseUrl),
+  };
 }
 
 function element(tag, className, text) {
@@ -75,8 +129,46 @@ function getLocalStorage() {
   try {
     return window.localStorage;
   } catch {
-    return { getItem: () => null };
+    return {
+      getItem: () => null,
+      setItem() {
+        throw new Error("Browser storage is unavailable.");
+      },
+    };
   }
+}
+
+function createWorkspaceLink(tab, navigate, route, title, description = "") {
+  const button = element("button", "tabbed-shortcut");
+  button.type = "button";
+  const mark = element("span", "tabbed-shortcut-mark", shortcutPages.find((item) => item.route === route)?.mark || "↗");
+  const copy = element("span", "tabbed-shortcut-copy");
+  copy.append(element("strong", "", title));
+  if (description) copy.append(element("small", "", description));
+  button.append(mark, copy);
+  button.addEventListener("click", () => navigate(tab, internalRoutes.get(route)));
+  return button;
+}
+
+function applyInternalFrameTheme(frame, workspace) {
+  const internalDocument = frame.contentDocument;
+  if (!internalDocument) return;
+  internalDocument.documentElement.dataset.tabbedEmbed = "";
+  internalDocument.documentElement.dataset.tabbedTheme = workspace.dataset.theme || "midnight";
+  internalDocument.documentElement.dataset.tabbedAccent = workspace.dataset.accent || "violet";
+  if (!internalDocument.getElementById("tabbed-internal-style")) {
+    const stylesheet = internalDocument.createElement("link");
+    stylesheet.id = "tabbed-internal-style";
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = "/assets/css/tabbed-internal.css?v=4";
+    internalDocument.head.append(stylesheet);
+  }
+  frame.contentWindow.openLink = (url) => navigateInternalFrameLink(frame, url);
+}
+
+function navigateInternalFrameLink(frame, url) {
+  const tab = frame.__workspaceTab;
+  if (tab) tab.navigate(url);
 }
 
 export function mountTabbedBrowser() {
@@ -108,13 +200,220 @@ export function mountTabbedBrowser() {
     const current = normalizeWorkspaceSettings(storage);
     workspace.dataset.theme = current.theme;
     workspace.dataset.accent = current.accent;
+    for (const tab of tabs) {
+      for (const frame of tab.internalFrames.values()) applyInternalFrameTheme(frame, workspace);
+    }
   };
+
+  function renderPageHeading(title, description) {
+    const heading = element("header", "tabbed-internal-heading");
+    heading.append(element("h1", "", title), element("p", "", description));
+    return heading;
+  }
+
+  function renderHome(tab) {
+    const home = element("div", "tabbed-home");
+    const searchForm = element("form", "tabbed-home-search");
+    searchForm.setAttribute("role", "search");
+    const search = element("input", "");
+    search.type = "search";
+    search.placeholder = "Search the web or enter an address";
+    search.setAttribute("aria-label", "Search or enter a web address");
+    search.autocomplete = "off";
+    const submit = element("button", "", "Search");
+    submit.type = "submit";
+    searchForm.append(search, submit);
+    searchForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      navigate(tab, search.value);
+    });
+    home.append(
+      element("div", "tabbed-home-mark", "XC"),
+      element("p", "tabbed-home-eyebrow", "INSTA XC4RS"),
+      element("h1", "", "Where to next?"),
+      searchForm,
+    );
+    const grid = element("nav", "tabbed-shortcut-grid");
+    grid.setAttribute("aria-label", "Workspace shortcuts");
+    for (const page of shortcutPages) {
+      grid.append(createWorkspaceLink(tab, navigate, page.route, page.name));
+    }
+    home.append(grid);
+    return home;
+  }
+
+  function renderSettings(tab) {
+    const settingsPage = element("div", "tabbed-internal-content");
+    settingsPage.append(renderPageHeading("Settings", "Personalize this workspace. Changes apply immediately."));
+
+    const modeSection = element("section", "tabbed-settings-section");
+    modeSection.append(element("h2", "", "Interface mode"));
+    const modeSelect = element("select", "tabbed-settings-select");
+    modeSelect.setAttribute("aria-label", "Interface mode");
+    for (const [value, label] of [["tabbed", "Tabbed"], ["casual", "Casual"]]) {
+      const option = element("option", "", label);
+      option.value = value;
+      modeSelect.append(option);
+    }
+    modeSelect.value = normalizeWorkspaceSettings(storage).mode;
+    const modeButton = element("button", "tabbed-settings-button", "Apply mode");
+    modeButton.type = "button";
+    modeButton.addEventListener("click", () => {
+      const mode = modeSelect.value === "casual" ? "casual" : "tabbed";
+      try {
+        storage.setItem("interfaceMode", mode);
+      } catch (error) {
+        tab.message.dataset.state = "error";
+        tab.message.textContent = `Could not save interface mode: ${error instanceof Error ? error.message : String(error)}`;
+        return;
+      }
+      if (mode === "casual") window.location.assign("/");
+      else {
+        document.documentElement.dataset.interfaceMode = "tabbed";
+        tab.message.dataset.state = "success";
+        tab.message.textContent = "Tabbed mode is already active.";
+      }
+    });
+    modeSection.append(modeSelect, modeButton);
+    settingsPage.append(modeSection);
+
+    const themeSection = element("section", "tabbed-settings-section");
+    themeSection.append(element("h2", "", "Tabbed theme"));
+    const themeGrid = element("div", "tabbed-settings-options");
+    for (const [value, label] of [["midnight", "Midnight"], ["obsidian", "Obsidian"], ["slate", "Slate"], ["light", "Light"]]) {
+      const button = element("button", "tabbed-theme-choice", label);
+      button.type = "button";
+      button.dataset.theme = value;
+      button.setAttribute("aria-pressed", String(workspace.dataset.theme === value));
+      button.addEventListener("click", () => {
+        try {
+          storage.setItem("tabbedTheme", value);
+        } catch (error) {
+          tab.message.dataset.state = "error";
+          tab.message.textContent = `Could not save the theme: ${error instanceof Error ? error.message : String(error)}`;
+          return;
+        }
+        persistTheme();
+        for (const choice of themeGrid.querySelectorAll("[data-theme]")) {
+          choice.setAttribute("aria-pressed", String(choice.dataset.theme === value));
+        }
+      });
+      themeGrid.append(button);
+    }
+    themeSection.append(themeGrid);
+
+    const accentHeading = element("h3", "", "Accent color");
+    const accentGrid = element("div", "tabbed-settings-options");
+    for (const [value, label] of [["violet", "Violet"], ["ice", "Icy blue"], ["silver", "Silver"]]) {
+      const button = element("button", "tabbed-accent-choice", label);
+      button.type = "button";
+      button.dataset.accent = value;
+      button.setAttribute("aria-pressed", String(workspace.dataset.accent === value));
+      button.addEventListener("click", () => {
+        try {
+          storage.setItem("tabbedAccent", value);
+        } catch (error) {
+          tab.message.dataset.state = "error";
+          tab.message.textContent = `Could not save the accent color: ${error instanceof Error ? error.message : String(error)}`;
+          return;
+        }
+        persistTheme();
+        for (const choice of accentGrid.querySelectorAll("[data-accent]")) {
+          choice.setAttribute("aria-pressed", String(choice.dataset.accent === value));
+        }
+      });
+      accentGrid.append(button);
+    }
+    themeSection.append(accentHeading, accentGrid);
+    settingsPage.append(themeSection);
+    return settingsPage;
+  }
+
+  function renderAbout(tab) {
+    const about = element("div", "tabbed-internal-content");
+    about.append(
+      renderPageHeading("About INSTA XC4RS", "A familiar space for browsing, games and apps."),
+    );
+    const card = element("section", "tabbed-settings-section");
+    card.append(
+      element("h2", "", "Browse with clarity"),
+      element("p", "", "Tabbed mode keeps your pages together in one compact workspace while continuing to use the project’s Scramjet and Wisp proxy setup."),
+      element("p", "", "Tabs share this site’s proxy session, cookies, storage and service worker. They are not separate browser profiles."),
+    );
+    about.append(card);
+    const links = element("nav", "tabbed-shortcut-grid");
+    links.setAttribute("aria-label", "About page links");
+    for (const page of shortcutPages.filter((item) => ["games", "apps", "settings"].includes(item.route))) {
+      links.append(createWorkspaceLink(tab, navigate, page.route, page.name));
+    }
+    about.append(links);
+    return about;
+  }
+
+  function renderUnknownInternal(tab, address) {
+    const page = element("div", "tabbed-internal-content");
+    page.append(
+      renderPageHeading("Page not found", "That internal workspace address is not available."),
+      element("p", "tabbed-internal-address", address),
+    );
+    const home = createWorkspaceLink(tab, navigate, "home", "Back to Home");
+    page.append(home);
+    return page;
+  }
+
+  function mountInternalCatalog(tab, route) {
+    let frame = tab.internalFrames.get(route);
+    if (frame) {
+      tab.internalFrameHost.replaceChildren(frame);
+      applyInternalFrameTheme(frame, workspace);
+      return;
+    }
+    frame = document.createElement("iframe");
+    frame.className = "tabbed-internal-frame";
+    frame.title = route === "games" ? "Games catalog" : "Apps catalog";
+    frame.loading = "eager";
+    frame.referrerPolicy = "same-origin";
+    frame.__workspaceTab = { navigate: (url) => navigate(tab, url) };
+    frame.addEventListener("load", () => {
+      applyInternalFrameTheme(frame, workspace);
+      const internalDocument = frame.contentDocument;
+      internalDocument?.addEventListener("click", (event) => {
+        const link = event.target.closest?.("a[href]");
+        if (!link) return;
+        const target = new URL(link.href);
+        if (target.origin !== location.origin) {
+          event.preventDefault();
+          navigate(tab, target.href);
+        } else if (firstPartyRoutes.has(target.pathname)) {
+          event.preventDefault();
+          navigate(tab, target.pathname);
+        }
+      }, true);
+    });
+    frame.src = routeSources[route];
+    tab.internalFrames.set(route, frame);
+    tab.internalFrameHost.replaceChildren(frame);
+  }
+
+  function renderInternalPage(tab, route, addressValue) {
+    tab.internalFrameHost.replaceChildren();
+    if (route === "games" || route === "apps") {
+      mountInternalCatalog(tab, route);
+      return;
+    }
+    tab.internalHost.replaceChildren();
+    if (route === "home") tab.internalHost.append(renderHome(tab));
+    else if (route === "settings") tab.internalHost.append(renderSettings(tab));
+    else if (route === "about") tab.internalHost.append(renderAbout(tab));
+    else tab.internalHost.append(renderUnknownInternal(tab, addressValue));
+  }
+
   persistTheme();
 
   function renderTabs() {
     tabsElement.replaceChildren();
     for (const tab of tabs) {
-      const tabButton = element("button", `tabbed-tab${tab.id === activeId ? " is-active" : ""}`);
+      const tabButton = element("button", `tabbed-tab${tab.id === activeId ? " is-active" : ""}${tab.loading ? " is-loading" : ""}`);
       tabButton.type = "button";
       tabButton.id = `tab-button-${tab.id}`;
       tabButton.role = "tab";
@@ -144,18 +443,24 @@ export function mountTabbedBrowser() {
     const tab = tabs.find((entry) => entry.id === activeId);
     address.value = tab?.url ?? "";
     address.placeholder = "Search or enter a web address";
+    if (tab) document.title = `${tab.title} | wld al3m`;
     const back = workspace.querySelector('[data-tab-action="back"]');
     const forward = workspace.querySelector('[data-tab-action="forward"]');
     const reload = workspace.querySelector('[data-tab-action="reload"]');
     if (back) back.disabled = !tab || tab.historyIndex <= 0;
     if (forward) forward.disabled = !tab || tab.historyIndex >= tab.history.length - 1;
-    if (reload) reload.disabled = !tab?.frame;
+    if (reload) reload.disabled = !tab || (!tab.frame && !tab.internalRoute);
     for (const entry of tabs) {
       const page = entry.page;
       const selected = entry.id === activeId;
       page.hidden = !selected;
       page.setAttribute("aria-labelledby", `tab-button-${entry.id}`);
       if (entry.frameElement) entry.frameElement.loading = selected ? "eager" : "lazy";
+      const isInternal = Boolean(entry.internalRoute);
+      entry.internalHost.hidden = !isInternal || entry.internalRoute === "games" || entry.internalRoute === "apps";
+      entry.internalFrameHost.hidden = !isInternal || (entry.internalRoute !== "games" && entry.internalRoute !== "apps");
+      entry.frameHost.hidden = isInternal;
+      entry.start.hidden = Boolean(entry.url);
     }
     renderTabs();
   }
@@ -179,23 +484,12 @@ export function mountTabbedBrowser() {
     page.tabIndex = 0;
 
     const start = element("div", "tabbed-start");
-    start.append(
-      element("div", "tabbed-mark", "XC"),
-      element("h1", "", "A clearer place to browse"),
-      element("p", "", "Search the web or open one of your usual destinations."),
-    );
-    const quickLinks = element("div", "tabbed-quick-links");
-    for (const site of sites) {
-      const button = element("button", "tabbed-quick-link", site.name);
-      button.type = "button";
-      button.addEventListener("click", () => navigate(tab, site.url));
-      quickLinks.append(button);
-    }
-    start.append(quickLinks);
     const message = element("p", "tabbed-page-message");
     message.setAttribute("role", "status");
     const frameHost = element("div", "tabbed-frame-host");
-    page.append(start, message, frameHost);
+    const internalHost = element("div", "tabbed-internal-host");
+    const internalFrameHost = element("div", "tabbed-internal-frame-host");
+    page.append(start, internalHost, internalFrameHost, message, frameHost);
     pagesElement.append(page);
     const tab = {
       id,
@@ -205,6 +499,11 @@ export function mountTabbedBrowser() {
       historyIndex: -1,
       page,
       start,
+      internalHost,
+      internalFrameHost,
+      internalFrames: new Map(),
+      internalRoute: "home",
+      navigate: (url) => navigate(tab, url),
       message,
       frameHost,
       frame: null,
@@ -214,6 +513,7 @@ export function mountTabbedBrowser() {
     };
     tabs.push(tab);
     selectTab(id);
+    navigate(tab, "fdetk://home", { historyMode: "replace" });
     return tab;
   }
 
@@ -336,27 +636,59 @@ export function mountTabbedBrowser() {
     return tab.frame;
   }
 
-  async function navigate(tab, input) {
-    let target;
+  function updateHistory(tab, addressValue, historyMode) {
+    if (historyMode === "none") return;
+    if (historyMode === "replace" && tab.historyIndex >= 0) {
+      tab.history[tab.historyIndex] = addressValue;
+    } else {
+      tab.history = tab.history.slice(0, tab.historyIndex + 1);
+      if (tab.history.at(-1) !== addressValue) tab.history.push(addressValue);
+      tab.historyIndex = tab.history.length - 1;
+    }
+  }
+
+  async function navigate(tab, input, { historyMode = "push" } = {}) {
+    let resolved;
     try {
-      target = resolveWorkspaceAddress(input, storage.getItem("searchEngine") || "duckduckgo");
+      resolved = resolveWorkspaceNavigation(input, storage.getItem("searchEngine") || "duckduckgo");
     } catch (error) {
       tab.message.textContent = error instanceof Error ? error.message : "That address could not be opened.";
       tab.message.dataset.state = "error";
       return;
     }
-    if (!target) return;
+    if (!resolved.address) return;
 
     tab.navigationId += 1;
     const navigationId = tab.navigationId;
+    if (tab.timeout) clearTimeout(tab.timeout);
+    if (resolved.type === "internal") {
+      tab.internalRoute = resolved.route;
+      tab.url = resolved.address;
+      tab.loading = false;
+      tab.message.textContent = "";
+      tab.message.dataset.state = "";
+      updateHistory(tab, resolved.address, historyMode);
+      const title = ({
+        home: "Home",
+        settings: "Settings",
+        about: "About",
+        games: "Games",
+        apps: "Apps",
+        "not-found": "Page not found",
+      })[resolved.route] || "Page not found";
+      updateTabTitle(tab, title);
+      renderInternalPage(tab, resolved.route, resolved.address);
+      updateControls();
+      return;
+    }
+
+    const target = resolved.address;
+    tab.internalRoute = "";
     tab.loading = true;
     tab.message.dataset.state = "loading";
     tab.message.textContent = "Connecting through Scramjet…";
-    tab.start.hidden = true;
     tab.url = target;
-    tab.history = tab.history.slice(0, tab.historyIndex + 1);
-    if (tab.history.at(-1) !== target) tab.history.push(target);
-    tab.historyIndex = tab.history.length - 1;
+    updateHistory(tab, target, historyMode);
     updateTabTitle(tab, hostLabel(target));
     updateControls();
 
@@ -377,7 +709,7 @@ export function mountTabbedBrowser() {
       tab.loading = false;
       tab.message.dataset.state = "error";
       tab.message.textContent = `Could not start the proxied page: ${error instanceof Error ? error.message : String(error)}`;
-      tab.start.hidden = true;
+      tab.internalRoute = "";
       updateControls();
     }
   }
@@ -388,23 +720,20 @@ export function mountTabbedBrowser() {
     const nextIndex = tab.historyIndex + delta;
     if (nextIndex < 0 || nextIndex >= tab.history.length) return;
     tab.historyIndex = nextIndex;
-    tab.url = tab.history[nextIndex];
-    tab.navigationId += 1;
-    if (tab.frame) {
-      tab.loading = true;
-      tab.message.dataset.state = "loading";
-      tab.message.textContent = "Loading page…";
-      tab.frame.go(tab.url);
-    } else {
-      navigate(tab, tab.url);
-    }
-    updateControls();
+    navigate(tab, tab.history[nextIndex], { historyMode: "none" });
   }
 
   addressForm.addEventListener("submit", (event) => {
     event.preventDefault();
     const tab = tabs.find((entry) => entry.id === activeId);
     if (tab) navigate(tab, address.value);
+  });
+  workspace.addEventListener("click", (event) => {
+    const link = event.target.closest?.('a[href^="fdetk://"]');
+    if (!link) return;
+    event.preventDefault();
+    const tab = tabs.find((entry) => entry.id === activeId);
+    if (tab) navigate(tab, link.href);
   });
   address.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "l") {
@@ -430,28 +759,12 @@ export function mountTabbedBrowser() {
             tab.message.textContent = "Reloading…";
             tab.frame.reload();
             updateControls();
+          } else if (tab.internalRoute) {
+            navigate(tab, tab.url, { historyMode: "none" });
           }
           break;
         case "home":
-          tab.navigationId += 1;
-          if (tab.timeout) clearTimeout(tab.timeout);
-          if (tab.frame) {
-            const controller = window.__snorlaxScramjetController;
-            const frameIndex = controller?.frames.indexOf(tab.frame) ?? -1;
-            if (frameIndex >= 0) controller.frames.splice(frameIndex, 1);
-            tab.frameElement.remove();
-          }
-          tab.frame = null;
-          tab.frameElement = null;
-          tab.frameHost.replaceChildren();
-          tab.url = "";
-          tab.history = [];
-          tab.historyIndex = -1;
-          tab.loading = false;
-          tab.message.textContent = "";
-          tab.start.hidden = false;
-          updateTabTitle(tab, "New tab");
-          updateControls();
+          navigate(tab, "fdetk://home");
           break;
       }
     });

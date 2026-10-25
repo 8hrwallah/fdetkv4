@@ -1,7 +1,12 @@
 # Changelog
 
+- Fixed Casual mode turning black: embedded-catalog theming rules matched every page through `html[data-tabbed-theme]`, overriding the body background; they are now scoped to `html[data-tabbed-embed]`, which only Tabbed's internal frames set.
+- Renamed app-defined internal routes from `chrome://` to `fdetk://`.
+
 ## 2026-10-25
 
+- Added a useful Tabbed start page, in-shell Settings/About/Games/Apps pages, safe `fdetk://` routing, theme-aware internal catalogs, and browser-history navigation without leaving the workspace.
+- Reduced the Tabbed chrome height, made the new-tab control square, and moved the shared-session privacy note into About.
 - Replaced the default Slope shortcut with TikTok and migrated the saved shortcut slot; TikTok continues through the normal Scramjet proxy navigation path.
 - Updated site branding and page titles to INSTA XC4RS / `wld al3m`; the saved tab-name preference now applies to Home and the proxy portal without replacing named-page titles.
 - Preserved the shortcut loop phase during resizing and pause/resume at page visibility changes.

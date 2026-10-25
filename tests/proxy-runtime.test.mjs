@@ -20,6 +20,7 @@ import {
 import {
   normalizeWorkspaceSettings,
   resolveWorkspaceAddress,
+  resolveWorkspaceNavigation,
 } from "../artifacts/snorlax-cave/public/assets/js/tabbed-browser.js";
 import {
   buildSearchUrl,
@@ -417,6 +418,22 @@ test("tabbed preferences use safe defaults and validate web navigation", () => {
     () => resolveWorkspaceAddress("javascript:alert(1)", "duckduckgo", "https://portal.example/"),
     /Only HTTP and HTTPS/,
   );
+  assert.deepEqual(
+    resolveWorkspaceNavigation("fdetk://settings", "duckduckgo", "https://portal.example/"),
+    { type: "internal", route: "settings", address: "fdetk://settings" },
+  );
+  assert.deepEqual(
+    resolveWorkspaceNavigation("/math", "duckduckgo", "https://portal.example/"),
+    { type: "internal", route: "games", address: "fdetk://games" },
+  );
+  assert.deepEqual(
+    resolveWorkspaceNavigation("fdetk://extensions", "duckduckgo", "https://portal.example/"),
+    { type: "internal", route: "not-found", address: "fdetk://extensions" },
+  );
+  assert.deepEqual(
+    resolveWorkspaceNavigation("example.org", "duckduckgo", "https://portal.example/"),
+    { type: "web", address: "https://example.org/" },
+  );
 });
 
 test("CRX upload inspection validates headers and reads only manifest metadata", async () => {
@@ -446,6 +463,8 @@ test("CRX upload inspection validates headers and reads only manifest metadata",
 
 test("tabbed workspace reuses the Scramjet controller and development logs omit query data", () => {
   assert.match(homepageSource, /tabbed-browser\.js/);
+  assert.match(homepageSource, /href="fdetk:\/\/settings"/);
+  assert.doesNotMatch(homepageSource, /tabbed-note/);
   assert.match(settingsSource, /value="casual"/);
   assert.match(settingsSource, /value="tabbed"/);
   assert.match(settingsSource, /not installed or running|cannot install Chrome extensions/i);
@@ -660,4 +679,11 @@ test("UV reports internal transport failures as plain-text 502 responses", async
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.equal(await response.text(), "The proxied request could not be completed.");
   assert.equal(errors.length, 1);
+});
+
+test("Tabbed embedded-page theming cannot restyle the Casual document", async () => {
+  const css = await readFile(new URL("../artifacts/snorlax-cave/public/assets/css/tabbed-internal.css", import.meta.url), "utf8");
+  const selectors = css.match(/html\[data-tabbed-[^{]+\{/g) || [];
+  assert.ok(selectors.length > 0);
+  for (const selector of selectors) assert.match(selector, /data-tabbed-embed/);
 });
