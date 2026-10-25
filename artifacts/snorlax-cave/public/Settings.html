@@ -12,7 +12,7 @@
   <link rel="icon" href="/assets/img/newlogo.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
   <meta name="sps-bot" content="true">
-  <link rel="stylesheet" href="/assets/css/style.css" />
+  <link rel="stylesheet" href="/assets/css/style.css?v=tabbed-workspace-4" />
   <link rel="stylesheet" href="/assets/css/animations.css" />
   <script src="/assets/js/functions.js"></script>
 </head>
@@ -76,6 +76,60 @@
       <br>
     </div>
     <div class="settings-item">
+      <section class="workspace-setting">
+        <h1 class="large">Interface Mode</h1>
+        <p>Choose the familiar Casual homepage or the compact Tabbed browsing workspace.</p>
+        <label class="workspace-field" for="interface-mode">Home interface</label>
+        <select id="interface-mode" class="search-bar workspace-select">
+          <option value="casual">Casual</option>
+          <option value="tabbed">Tabbed</option>
+        </select>
+        <button id="save-interface-mode" type="button" class="workspace-save">Apply mode</button>
+        <p id="interface-mode-status" class="workspace-status" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="workspace-setting">
+        <h1 class="large">Tabbed Theme</h1>
+        <p>These colors apply only to Tabbed mode.</p>
+        <fieldset class="theme-options">
+          <legend class="visually-hidden">Choose a Tabbed theme</legend>
+          <label class="theme-choice">
+            <input type="radio" name="tabbed-theme" value="midnight">
+            <span class="theme-preview theme-preview--midnight" aria-hidden="true"></span>
+            <span>Midnight</span>
+          </label>
+          <label class="theme-choice">
+            <input type="radio" name="tabbed-theme" value="obsidian">
+            <span class="theme-preview theme-preview--obsidian" aria-hidden="true"></span>
+            <span>Obsidian</span>
+          </label>
+          <label class="theme-choice">
+            <input type="radio" name="tabbed-theme" value="slate">
+            <span class="theme-preview theme-preview--slate" aria-hidden="true"></span>
+            <span>Slate</span>
+          </label>
+          <label class="theme-choice">
+            <input type="radio" name="tabbed-theme" value="light">
+            <span class="theme-preview theme-preview--light" aria-hidden="true"></span>
+            <span>Light</span>
+          </label>
+        </fieldset>
+        <fieldset class="accent-options">
+          <legend>Accent</legend>
+          <label><input type="radio" name="tabbed-accent" value="violet"><span class="accent-dot accent-dot--violet"></span> Violet</label>
+          <label><input type="radio" name="tabbed-accent" value="ice"><span class="accent-dot accent-dot--ice"></span> Icy blue</label>
+          <label><input type="radio" name="tabbed-accent" value="silver"><span class="accent-dot accent-dot--silver"></span> Silver</label>
+        </fieldset>
+      </section>
+
+      <section class="workspace-setting">
+        <h1 class="large">Add-ons</h1>
+        <p>Inspect a CRX package locally. This web app cannot install Chrome extensions into your browser or provide chrome.* APIs. Uploaded files are not sent to a server or executed.</p>
+        <label class="crx-upload-label" for="crx-upload">Choose a .crx file (up to 20 MB)</label>
+        <input id="crx-upload" type="file" accept=".crx,application/x-chrome-extension">
+        <p id="crx-status" class="workspace-status" role="status" aria-live="polite">CRX files are inspected in this page only.</p>
+      </section>
+
       <br>
       <h1 class="large">Change Tab Name</h1>
       <br>
@@ -127,6 +181,7 @@
       <button onclick="saveSearchEngine()">Save Search Engine</button>
     </div>
     <script type="module" src="/assets/js/index.js"></script>
+    <script type="module" src="/assets/js/settings-workspace.js?v=tabbed-settings-2"></script>
     <script src="/uv/uv.bundle.js"></script>
     <script src="/uv/uv.config.js"></script>
     <script>

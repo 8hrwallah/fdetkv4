@@ -14,6 +14,14 @@ import {
 import { NodeTCPSocket } from "../artifacts/api-server/node_modules/@mercuryworkshop/wisp-js/src/server/net.mjs";
 import { resolvePortalTitle } from "../artifacts/snorlax-cave/public/assets/js/site-title.js";
 import {
+  findCrxZipOffset,
+  inspectCrxFile,
+} from "../artifacts/snorlax-cave/public/assets/js/settings-workspace.js";
+import {
+  normalizeWorkspaceSettings,
+  resolveWorkspaceAddress,
+} from "../artifacts/snorlax-cave/public/assets/js/tabbed-browser.js";
+import {
   buildSearchUrl,
   isDuckDuckGoSearchUrl,
   resolveAddressInput,
@@ -43,6 +51,59 @@ const shortcutStyles = await readFile(
   new URL("../artifacts/snorlax-cave/public/assets/css/style.css", import.meta.url),
   "utf8",
 );
+const scramjetWorkerSource = await readFile(
+  new URL("../artifacts/snorlax-cave/public/scramjet-sw.js", import.meta.url),
+  "utf8",
+);
+const settingsSource = await readFile(
+  new URL("../artifacts/snorlax-cave/public/Settings.html", import.meta.url),
+  "utf8",
+);
+
+function makeStoredCrx3(manifest) {
+  const name = Buffer.from("manifest.json");
+  const payload = Buffer.from(JSON.stringify(manifest));
+  const localHeader = Buffer.alloc(30);
+  localHeader.writeUInt32LE(0x04034b50, 0);
+  localHeader.writeUInt16LE(20, 4);
+  localHeader.writeUInt32LE(payload.length, 18);
+  localHeader.writeUInt32LE(payload.length, 22);
+  localHeader.writeUInt16LE(name.length, 26);
+
+  const centralHeader = Buffer.alloc(46);
+  centralHeader.writeUInt32LE(0x02014b50, 0);
+  centralHeader.writeUInt16LE(20, 4);
+  centralHeader.writeUInt16LE(20, 6);
+  centralHeader.writeUInt32LE(payload.length, 20);
+  centralHeader.writeUInt32LE(payload.length, 24);
+  centralHeader.writeUInt16LE(name.length, 28);
+
+  const localEntry = Buffer.concat([localHeader, name, payload]);
+  const centralOffset = localEntry.length;
+  const centralEntry = Buffer.concat([centralHeader, name]);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(1, 8);
+  end.writeUInt16LE(1, 10);
+  end.writeUInt32LE(centralEntry.length, 12);
+  end.writeUInt32LE(centralOffset, 16);
+
+  const zip = Buffer.concat([localEntry, centralEntry, end]);
+  const header = Buffer.alloc(12);
+  header.write("Cr24", 0);
+  header.writeUInt32LE(3, 4);
+  header.writeUInt32LE(0, 8);
+  return Buffer.concat([header, zip]);
+}
+
+function toFile(bytes, name = "sample.crx") {
+  const copy = Uint8Array.from(bytes);
+  return {
+    name,
+    size: copy.byteLength,
+    arrayBuffer: async () => copy.buffer,
+  };
+}
 
 class TestEventEmitter {
   emit() {}
@@ -328,6 +389,70 @@ test("shortcut marquee repeats enough content to cover desktop and mobile viewpo
   assert.match(homepageSource, /aria-label="Move shortcuts right"/);
   assert.match(shortcutStyles, /@keyframes app-shortcuts-marquee/);
   assert.match(shortcutStyles, /prefers-reduced-motion: reduce/);
+});
+
+test("tabbed preferences use safe defaults and validate web navigation", () => {
+  const storage = new Map([
+    ["interfaceMode", "tabbed"],
+    ["tabbedTheme", "light"],
+    ["tabbedAccent", "ice"],
+  ]);
+  assert.deepEqual(
+    normalizeWorkspaceSettings({ getItem: (key) => storage.get(key) ?? null }),
+    { mode: "tabbed", theme: "light", accent: "ice" },
+  );
+  assert.deepEqual(
+    normalizeWorkspaceSettings({ getItem: () => "invalid" }),
+    { mode: "casual", theme: "midnight", accent: "violet" },
+  );
+  assert.equal(
+    resolveWorkspaceAddress("example.org", "duckduckgo", "https://portal.example/"),
+    "https://example.org/",
+  );
+  assert.equal(
+    resolveWorkspaceAddress("snorlax test", "duckduckgo", "https://portal.example/"),
+    "https://duckduckgo.com/?q=snorlax%20test",
+  );
+  assert.throws(
+    () => resolveWorkspaceAddress("javascript:alert(1)", "duckduckgo", "https://portal.example/"),
+    /Only HTTP and HTTPS/,
+  );
+});
+
+test("CRX upload inspection validates headers and reads only manifest metadata", async () => {
+  const bytes = makeStoredCrx3({
+    name: "Local test extension",
+    version: "1.2.3",
+    manifest_version: 3,
+    permissions: ["storage", "tabs"],
+  });
+  assert.deepEqual(findCrxZipOffset(bytes), { version: 3, zipOffset: 12 });
+  assert.deepEqual(await inspectCrxFile(toFile(bytes)), {
+    crxVersion: 3,
+    name: "Local test extension",
+    version: "1.2.3",
+    manifestVersion: 3,
+    permissionCount: 2,
+  });
+  await assert.rejects(
+    () => inspectCrxFile(toFile(bytes, "extension.txt")),
+    /\.crx/,
+  );
+  await assert.rejects(
+    () => inspectCrxFile(toFile(Buffer.alloc(32))),
+    /valid CRX header/,
+  );
+});
+
+test("tabbed workspace reuses the Scramjet controller and development logs omit query data", () => {
+  assert.match(homepageSource, /tabbed-browser\.js/);
+  assert.match(settingsSource, /value="casual"/);
+  assert.match(settingsSource, /value="tabbed"/);
+  assert.match(settingsSource, /not installed or running|cannot install Chrome extensions/i);
+  assert.ok(scramjetWorkerSource.includes('response.headers.get("content-type")'));
+  assert.ok(scramjetWorkerSource.includes("response.status >= 400"));
+  assert.equal(scramjetWorkerSource.includes("request.body"), false);
+  assert.equal(scramjetWorkerSource.includes("searchParams"), false);
 });
 
 test("Wisp TCP writes tolerate a socket closed while queued data is pending", async () => {

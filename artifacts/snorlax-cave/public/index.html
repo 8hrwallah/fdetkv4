@@ -11,17 +11,59 @@
   <link rel="icon" href="/assets/img/newlogo.png">
   <link href="https://fonts.googleapis.com/css2?family=Montserrat&display=swap" rel="stylesheet" />
   <meta name="sps-bot" content="true">
-  <link rel="stylesheet" href="/assets/css/style.css" />
+  <script>
+    try {
+      const mode = localStorage.getItem("interfaceMode");
+      document.documentElement.dataset.interfaceMode = mode === "tabbed" ? "tabbed" : "casual";
+      document.documentElement.dataset.tabbedTheme = ["midnight", "obsidian", "slate", "light"].includes(localStorage.getItem("tabbedTheme"))
+        ? localStorage.getItem("tabbedTheme")
+        : "midnight";
+      document.documentElement.dataset.tabbedAccent = ["violet", "ice", "silver"].includes(localStorage.getItem("tabbedAccent"))
+        ? localStorage.getItem("tabbedAccent")
+        : "violet";
+    } catch {
+      document.documentElement.dataset.interfaceMode = "casual";
+    }
+  </script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=tabbed-workspace-4" />
   <link rel="stylesheet" href="/assets/css/animations.css" />
   <script src="/assets/js/functions.js"></script>
   <script type="module" src="/assets/js/site-title.js?v=site-title-1"></script>
 <script>
   if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-    window.location.href = "mobile.html";
+    try {
+      if (localStorage.getItem("interfaceMode") !== "tabbed") {
+        window.location.href = "mobile.html";
+      }
+    } catch {
+      window.location.href = "mobile.html";
+    }
   }
 </script>
 </head>
 <body>
+  <main id="tabbed-workspace" class="tabbed-workspace" aria-label="Tabbed browsing workspace" hidden>
+    <header class="tabbed-header">
+      <div class="tabbed-tabs-row">
+        <div id="tabbed-tabs" class="tabbed-tabs" role="tablist" aria-label="Browser tabs"></div>
+        <button id="tabbed-new-tab" class="tabbed-new-tab" type="button" aria-label="New tab" title="New tab">+</button>
+        <a class="tabbed-settings-link" href="/settings" aria-label="Settings" title="Settings">Settings</a>
+      </div>
+      <form id="tabbed-address-form" class="tabbed-toolbar" autocomplete="off">
+        <button type="button" data-tab-action="back" aria-label="Back" title="Back">‹</button>
+        <button type="button" data-tab-action="forward" aria-label="Forward" title="Forward">›</button>
+        <button type="button" data-tab-action="reload" aria-label="Reload" title="Reload">↻</button>
+        <button type="button" data-tab-action="home" aria-label="New tab page" title="New tab page">⌂</button>
+        <label class="tabbed-address-wrap">
+          <span class="visually-hidden">Address or search</span>
+          <input id="tabbed-address" type="text" inputmode="url" spellcheck="false" placeholder="Search or enter a web address" aria-label="Search or enter a web address">
+        </label>
+        <button class="tabbed-go" type="submit" aria-label="Go" title="Go">Go</button>
+      </form>
+    </header>
+    <section id="tabbed-pages" class="tabbed-pages" aria-live="polite"></section>
+    <footer class="tabbed-note">Tabs share this site’s proxy session, cookies, and storage; they are not isolated browser profiles.</footer>
+  </main>
   <nav>
     <div class="heading">
       <a href="/#" class="headinglink">INSTA XC4RS</a>
@@ -197,13 +239,6 @@
   };
 </script>
 <script>
-  const visited = localStorage.getItem('visited');
-  if (!visited) {
-    alert('HELLO! Welcome to INSTA XC4RS!');
-    localStorage.setItem('visited', true);
-  }
-</script>
-<script>
   window.addEventListener('keydown', (event) => {
     const keysPressed = (event.key === '~');
     if (keysPressed) {
@@ -226,6 +261,7 @@
   });
 </script>
 </div>
+<script type="module" src="/assets/js/tabbed-browser.js?v=tabbed-workspace-6"></script>
 </body>
 
 </html>

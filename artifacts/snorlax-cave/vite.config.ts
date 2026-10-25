@@ -13,11 +13,44 @@ import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 const trimDuplicateDocumentPlugin = () => ({
   name: 'trim-duplicate-document',
   transformIndexHtml(html: string) {
-    const firstDocumentEnd = html.indexOf('</html>');
+    const lowerHtml = html.toLowerCase();
+    let cursor = 0;
+    let firstDocumentEnd = -1;
+
+    while (cursor < lowerHtml.length) {
+      const htmlEnd = lowerHtml.indexOf('</html', cursor);
+      const scriptStart = lowerHtml.indexOf('<script', cursor);
+      const commentStart = lowerHtml.indexOf('<!--', cursor);
+      const nextToken = Math.min(
+        htmlEnd === -1 ? Infinity : htmlEnd,
+        scriptStart === -1 ? Infinity : scriptStart,
+        commentStart === -1 ? Infinity : commentStart,
+      );
+
+      if (nextToken === Infinity) break;
+      if (nextToken === htmlEnd) {
+        firstDocumentEnd = lowerHtml.indexOf('>', htmlEnd);
+        break;
+      }
+      if (nextToken === commentStart) {
+        const commentEnd = lowerHtml.indexOf('-->', commentStart + 4);
+        if (commentEnd === -1) return html;
+        cursor = commentEnd + 3;
+        continue;
+      }
+
+      const scriptTagEnd = lowerHtml.indexOf('>', scriptStart + 7);
+      if (scriptTagEnd === -1) return html;
+      const scriptEnd = lowerHtml.indexOf('</script', scriptTagEnd + 1);
+      if (scriptEnd === -1) return html;
+      const scriptCloseEnd = lowerHtml.indexOf('>', scriptEnd + 8);
+      if (scriptCloseEnd === -1) return html;
+      cursor = scriptCloseEnd + 1;
+    }
+
     if (firstDocumentEnd === -1) return html;
 
-    const firstDocument = html.slice(0, firstDocumentEnd + '</html>'.length);
-    return firstDocument;
+    return html.slice(0, firstDocumentEnd + 1);
   },
 });
 
