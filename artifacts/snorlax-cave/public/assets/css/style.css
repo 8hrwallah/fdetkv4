@@ -888,8 +888,9 @@ html[data-interface-mode="tabbed"] body > :not(#tabbed-workspace):not(script) {
   min-width: 58px;
   border-color: var(--tb-accent);
   background: var(--tb-accent-soft);
-  font-size: 13px;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tabbed-address-wrap {
