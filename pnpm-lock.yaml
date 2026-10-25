@@ -146,7 +146,7 @@ overrides:
   esbuild: 0.27.3
 
 patchedDependencies:
-  '@mercuryworkshop/wisp-js@0.4.1': 444a7cbce4b775ed6f43681a15484faf78fa797b2674b174a60ae50586c16526
+  '@mercuryworkshop/wisp-js@0.4.1': 2b42f6f18856d9209df3845584a5c30c480348dd89afa2aa6cfcd90a054b8a6a
 
 importers:
 
@@ -167,7 +167,7 @@ importers:
     dependencies:
       '@mercuryworkshop/wisp-js':
         specifier: 0.4.1
-        version: 0.4.1(patch_hash=444a7cbce4b775ed6f43681a15484faf78fa797b2674b174a60ae50586c16526)
+        version: 0.4.1(patch_hash=2b42f6f18856d9209df3845584a5c30c480348dd89afa2aa6cfcd90a054b8a6a)
       '@tomphttp/bare-server-node':
         specifier: ^2.0.6
         version: 2.0.6(bufferutil@4.1.0)
@@ -3513,7 +3513,7 @@ snapshots:
       idb: 8.0.4
       parse-domain: 8.4.0
 
-  '@mercuryworkshop/wisp-js@0.4.1(patch_hash=444a7cbce4b775ed6f43681a15484faf78fa797b2674b174a60ae50586c16526)':
+  '@mercuryworkshop/wisp-js@0.4.1(patch_hash=2b42f6f18856d9209df3845584a5c30c480348dd89afa2aa6cfcd90a054b8a6a)':
     dependencies:
       bufferutil: 4.1.0
       commander: 14.0.3
