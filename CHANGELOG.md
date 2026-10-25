@@ -1,5 +1,7 @@
 # Changelog
 
+- Startup hardening: interface-specific scripts (UV, Casual search, shortcut marquee for Casual; `tabbed-browser.js` for Tabbed) are now injected by an ordered loader (`fdetkLoadScripts`, `async = false`) instead of `document.write`, which Chrome may block and which parsed differently from the original static tags. Ads keep their original `document.write` in Casual.
+
 - Startup: Casual is the default interface (no stored preference). Only the selected interface's scripts load: Tabbed no longer fetches UV, Casual search, app shortcuts or the ad scripts; Casual no longer fetches `tabbed-browser.js`, `scramjet-runtime.js` or `tabbed-shortcuts.js`. Ads are kept in Casual. This also removes duplicate `uv.bundle.js`/`index.js` requests.
 - Settings: the mode control is now "Startup interface" in both Casual Settings and Tabbed `fdetk://settings`; it persists in `localStorage.interfaceMode`.
 

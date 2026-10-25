@@ -514,7 +514,7 @@ test("portal title defaults to wld al3m and honors a saved custom title", () => 
 });
 
 test("address bar submit handler routes the required input matrix once", async () => {
-  assert.match(homepageSource, /fdetkWriteScript\("\/assets\/js\/index\.js", "casual", true\)/);
+  assert.match(homepageSource, /\["\/assets\/js\/index\.js", true\]/);
 
   const cases = [
     ["example.com", "https://example.com/"],
@@ -716,7 +716,9 @@ test("startup loads only the selected interface's scripts and defaults to Casual
   assert.match(firstDocument, /mode === "tabbed" \? "tabbed" : "casual"/);
   assert.doesNotMatch(firstDocument, /<script[^>]+src="\/assets\/js\/tabbed-browser\.js/);
   assert.doesNotMatch(firstDocument, /<script[^>]+src="\/uv\/uv\.bundle\.js/);
-  assert.match(firstDocument, /fdetkWriteScript\("\/assets\/js\/tabbed-browser\.js[^"]*", "tabbed", true\)/);
-  assert.match(firstDocument, /fdetkWriteScript\("\/uv\/uv\.bundle\.js", "casual"\)/);
+  assert.match(firstDocument, /fdetkLoadScripts\("tabbed", \[\["\/assets\/js\/tabbed-browser\.js[^"]*", true\]\]\)/);
+  assert.match(firstDocument, /fdetkLoadScripts\("casual", \[\s*\["\/uv\/uv\.bundle\.js"\],\s*\["\/uv\/uv\.config\.js"\],/);
+  assert.doesNotMatch(firstDocument, /fdetkWriteScript/);
+  assert.match(firstDocument, /el\.async = false/);
   assert.equal((firstDocument.match(/fdetkInterface !== "tabbed"\) document\.write/g) || []).length, 3);
 });

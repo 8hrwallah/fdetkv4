@@ -24,12 +24,18 @@
     }
   </script>
   <script>
-    // Casual-only scripts are written into the document only when Casual is the active interface,
-    // so Tabbed does not download or run them while hidden.
+    // Interface-specific scripts are injected by the matching interface only. Classic scripts keep
+    // their order (async = false); modules run after parsing like static module tags.
     window.fdetkInterface = document.documentElement.dataset.interfaceMode;
-    window.fdetkWriteScript = function (src, only, module) {
+    window.fdetkLoadScripts = function (only, scripts) {
       if (window.fdetkInterface !== only) return;
-      document.write('<script' + (module ? ' type="module"' : '') + ' src="' + src + '"><\/script>');
+      for (const [src, module] of scripts) {
+        const el = document.createElement("script");
+        if (module) el.type = "module";
+        el.async = false;
+        el.src = src;
+        document.head.appendChild(el);
+      }
     };
   </script>
   <link rel="stylesheet" href="/assets/css/style.css?v=tabbed-workspace-4" />
@@ -94,11 +100,7 @@
         
         <form method="POST" autocomplete="off" id="proxy-search-form">
           <input type="text" name="url" class="proxy" id="search" tag="searchbar" placeholder="Search the web!">
-          <script>
-            fdetkWriteScript("/uv/uv.bundle.js", "casual");
-            fdetkWriteScript("/uv/uv.config.js", "casual");
-            fdetkWriteScript("/assets/js/index.js", "casual", true);
-          </script>
+          
         </form>
     </div>
     <section class="app-shortcuts" id="app-shortcuts" aria-label="App shortcuts">
@@ -110,7 +112,14 @@
         <span aria-hidden="true">&#8250;</span>
       </button>
     </section>
-    <script>fdetkWriteScript("/assets/js/app-shortcuts.js?v=shortcuts-marquee-2", "casual", true);</script>
+    <script>
+      fdetkLoadScripts("casual", [
+        ["/uv/uv.bundle.js"],
+        ["/uv/uv.config.js"],
+        ["/assets/js/index.js", true],
+        ["/assets/js/app-shortcuts.js?v=shortcuts-marquee-2", true],
+      ]);
+    </script>
     <script type="module" src="/assets/js/site-title.js?v=site-title-1"></script>
     <br>
     <center>
@@ -303,7 +312,7 @@
 </div>
 </body>
 
-<script>fdetkWriteScript("/assets/js/tabbed-browser.js?v=tabbed-workspace-13", "tabbed", true);</script>
+<script>fdetkLoadScripts("tabbed", [["/assets/js/tabbed-browser.js?v=tabbed-workspace-14", true]]);</script>
 </html>
 <!DOCTYPE html>
 <html lang="en">
