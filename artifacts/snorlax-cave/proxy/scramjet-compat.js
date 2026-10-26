@@ -22,16 +22,23 @@
 
   // Scramjet stringifies the history URL argument, so replaceState(state, "", undefined)
   // or null navigates to ".../undefined". Native browsers keep the current URL instead.
+  function wrapHistoryMethod(holder, name) {
+    var original = holder[name];
+    if (typeof original !== "function") return;
+    holder[name] = function (state, title, url) {
+      if (url == null) return original.call(this, state, title, window.location.href);
+      return original.apply(this, arguments);
+    };
+  }
+
   function installHistoryCompat() {
     var proto = window.History && window.History.prototype;
-    if (!proto) return;
+    var instance = window.history;
     ["pushState", "replaceState"].forEach(function (name) {
-      var original = proto[name];
-      if (typeof original !== "function") return;
-      proto[name] = function (state, title, url) {
-        if (url == null) return original.call(this, state, title, window.location.href);
-        return original.apply(this, arguments);
-      };
+      if (proto) wrapHistoryMethod(proto, name);
+      // Scramjet's init hooks (run inside load) may have assigned wrappers directly on the
+      // history object, which shadow the prototype, so wrap those own properties as well.
+      if (instance && Object.prototype.hasOwnProperty.call(instance, name)) wrapHistoryMethod(instance, name);
     });
   }
 

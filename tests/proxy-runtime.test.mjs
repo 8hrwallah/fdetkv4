@@ -848,3 +848,204 @@ test("Monetag loads only on first-party Casual pages, once, and is inert without
   assert.equal(loadMonetag(win, cfg), "already-requested");
   assert.equal(appended.length, 1);
 });
+
+test("build-time precompression writes verified .br/.gz siblings and a manifest, skipping small and binary files", async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { gunzipSync, brotliDecompressSync } = await import("node:zlib");
+  const { precompressDirectory } = await import("../artifacts/snorlax-cave/proxy/precompress.mjs");
+  const root = mkdtempSync(join(tmpdir(), "precompress-"));
+  try {
+    mkdirSync(join(root, "a"));
+    const text = "function f(){return 'proxy';}\n".repeat(400);
+    writeFileSync(join(root, "a", "big.js"), text);
+    writeFileSync(join(root, "tiny.js"), "x=1");
+    writeFileSync(join(root, "movie.swf"), Buffer.alloc(5000, 1));
+    const manifest = precompressDirectory(root);
+    assert.deepEqual(Object.keys(manifest), ["/a/big.js"]);
+    assert.equal(brotliDecompressSync(readFileSync(join(root, "a", "big.js.br"))).toString(), text);
+    assert.equal(gunzipSync(readFileSync(join(root, "a", "big.js.gz"))).toString(), text);
+    assert.equal(existsSync(join(root, "tiny.js.br")), false);
+    assert.equal(existsSync(join(root, "movie.swf.gz")), false);
+    assert.deepEqual(JSON.parse(readFileSync(join(root, "precompressed.json"), "utf8")), manifest);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("precompressedStatic negotiates encodings, keeps types, and never touches ranges or unlisted paths", async () => {
+  const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { createServer } = await import("node:http");
+  const { gunzipSync, brotliDecompressSync } = await import("node:zlib");
+  const { default: express } = await import("../artifacts/api-server/node_modules/express/index.js");
+  const { precompressedStatic } = await import("../artifacts/api-server/src/lib/precompressed.ts");
+  const { precompressDirectory } = await import("../artifacts/snorlax-cave/proxy/precompress.mjs");
+  const root = mkdtempSync(join(tmpdir(), "precompressed-static-"));
+  const js = "const a = 1;\n".repeat(500);
+  const html = "<!doctype html><p>hello</p>\n".repeat(200);
+  mkdirSync(join(root, "scramjet"));
+  writeFileSync(join(root, "scramjet", "x.js"), js);
+  writeFileSync(join(root, "loader.html"), html);
+  writeFileSync(join(root, "scramjet", "x.wasm"), Buffer.alloc(4000, 7));
+  precompressDirectory(root);
+  const app = express();
+  app.use(precompressedStatic(root, { "/portal": "/loader.html" }));
+  app.use(express.static(root));
+  const server = createServer(app);
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const get = async (path, headers = {}) => {
+    const res = await fetch(base + path, { headers: { "Accept-Encoding": "identity", ...headers }, redirect: "manual" });
+    return { res, body: Buffer.from(await res.arrayBuffer()) };
+  };
+  const raw = (path, encoding) => new Promise((resolve, reject) => {
+    import("node:http").then(({ get: httpGet }) => httpGet(base + path, { headers: { "Accept-Encoding": encoding } }, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("end", () => resolve({ res, body: Buffer.concat(chunks) }));
+    }).on("error", reject));
+  });
+  try {
+    let { res, body } = await raw("/scramjet/x.js", "br, gzip");
+    assert.equal(res.headers["content-encoding"], "br");
+    assert.match(res.headers["content-type"], /javascript/);
+    assert.match(res.headers.vary, /Accept-Encoding/i);
+    assert.equal(brotliDecompressSync(body).toString(), js);
+    ({ res, body } = await raw("/scramjet/x.js", "gzip"));
+    assert.equal(res.headers["content-encoding"], "gzip");
+    assert.equal(gunzipSync(body).toString(), js);
+    ({ res, body } = await raw("/scramjet/x.js", "br;q=0, gzip;q=0"));
+    assert.equal(res.headers["content-encoding"], undefined);
+    assert.equal(body.toString(), js);
+    ({ res, body } = await raw("/portal", "br"));
+    assert.equal(res.headers["content-encoding"], "br");
+    assert.match(res.headers["content-type"], /text\/html/);
+    assert.equal(brotliDecompressSync(body).toString(), html);
+    ({ res } = await raw("/scramjet/x.wasm", "gzip"));
+    assert.equal(res.headers["content-type"], "application/wasm");
+    ({ res, body } = await get("/scramjet/x.js", { Range: "bytes=0-9" }));
+    assert.equal(res.status, 206);
+    assert.equal(res.headers.get("content-encoding"), null);
+    assert.equal(body.toString(), js.slice(0, 10));
+    ({ res } = await get("/scramjet/missing.js", { "Accept-Encoding": "br" }));
+    assert.equal(res.status, 404);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("server start script raises the libuv threadpool for concurrent Wisp DNS lookups", async () => {
+  const source = await readFile(new URL("../scripts/start-snorlax.mjs", import.meta.url), "utf8");
+  assert.match(source, /UV_THREADPOOL_SIZE: process\.env\.UV_THREADPOOL_SIZE \|\| '16'/);
+});
+
+test("Monetag is never bare in the shell; Casual pages load monetag.js and Tabbed never does", async () => {
+  const base = "../artifacts/snorlax-cave/";
+  const homepage = await readFile(new URL(base + "index.html", import.meta.url), "utf8");
+  assert.doesNotMatch(homepage, /quge5\.com|nap5k\.com|al5sm\.com|n6wxm\.com|data-zone=/);
+  assert.match(homepage.match(/fdetkLoadScripts\("casual", \[[\s\S]*?\]\);/)[0], /\/assets\/js\/monetag\.js/);
+  assert.doesNotMatch(homepage.match(/fdetkLoadScripts\("tabbed", \[[\s\S]*?\]\);/)[0], /monetag/);
+  assert.doesNotMatch(homepage, /<script[^>]+src="\/assets\/js\/monetag\.js/);
+  for (const file of ["Settings.html", "Games.html", "Apps.html", "About.html"]) {
+    const source = await readFile(new URL(`${base}public/${file}`, import.meta.url), "utf8");
+    assert.equal((source.match(/assets\/js\/monetag\.js/g) || []).length, 1, file);
+    assert.doesNotMatch(source, /quge5\.com|nap5k\.com|data-zone=/, file);
+  }
+  for (const file of ["loader.html", "chat.html"]) {
+    const source = await readFile(new URL(`${base}public/${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /monetag|quge5\.com|nap5k\.com/i, file);
+  }
+});
+
+test("Tabbed mounts the ad slot only on the active fdetk://home tab and removes it elsewhere", async () => {
+  const slot = await readFile(new URL("../artifacts/snorlax-cave/public/assets/ads/home-slot.html", import.meta.url), "utf8");
+  assert.equal((slot.match(/<script/g) || []).length, 1);
+  assert.match(slot, /<script src="https:\/\/quge5\.com\/88\/tag\.min\.js" data-zone="302480" async data-cfasync="false"><\/script>/);
+  const tabbed = await readFile(new URL("../artifacts/snorlax-cave/public/assets/js/tabbed-browser.js", import.meta.url), "utf8");
+  assert.match(tabbed, /syncHomeSlot\(entry, selected && entry\.internalRoute === "home"\)/);
+  assert.match(tabbed, /entry\.homeSlot\?\.remove\(\)/);
+  assert.equal((tabbed.match(/\/assets\/ads\/home-slot\.html/g) || []).length, 1);
+  assert.doesNotMatch(tabbed, /quge5\.com|monetag/i);
+});
+
+test("Monetag runs once on Casual pages only, never in Tabbed, proxy routes or frames", async () => {
+  const { loadMonetag, scheduleMonetag, MONETAG_TAGS, MONETAG_MULTITAG, CASUAL_AD_PATHS } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
+  assert.equal(MONETAG_MULTITAG.zone, "302480");
+  assert.equal(MONETAG_MULTITAG.src, "https://quge5.com/88/tag.min.js");
+  assert.equal(new Set(MONETAG_TAGS.map((tag) => tag.zone)).size, MONETAG_TAGS.length);
+  assert.equal(new Set(MONETAG_TAGS.map((tag) => tag.id)).size, MONETAG_TAGS.length);
+  const make = (over = {}, mode = "casual") => {
+    const appended = [];
+    const win = {
+      location: { pathname: "/", href: "https://site.test/" },
+      document: {
+        readyState: "complete",
+        head: { append: (n) => appended.push(n) },
+        documentElement: { dataset: { interfaceMode: mode } },
+        getElementById: () => null,
+        createElement: () => ({ dataset: {}, remove() {} }),
+      },
+      fdetkInterface: mode,
+      setTimeout: (fn) => fn(),
+      addEventListener() {},
+      ...over,
+    };
+    win.top = over.top ?? win;
+    return { win, appended };
+  };
+
+  const casual = make();
+  scheduleMonetag(casual.win);
+  scheduleMonetag(casual.win);
+  assert.deepEqual(casual.appended.map((s) => s.dataset.zone), ["302480"]);
+  assert.equal(casual.appended[0].dataset.cfasync, "false");
+
+  for (const pathname of CASUAL_AD_PATHS) {
+    const page = make({ location: { pathname, href: "https://site.test" + pathname } });
+    assert.equal(loadMonetag(page.win, MONETAG_MULTITAG), "requested", pathname);
+    assert.equal(page.appended.length, 1);
+  }
+  const tabbed = make({}, "tabbed");
+  scheduleMonetag(tabbed.win);
+  assert.equal(tabbed.appended.length, 0);
+  assert.equal(loadMonetag(make({}, "tabbed").win, MONETAG_MULTITAG), "tabbed");
+  const stored = make({ localStorage: { getItem: () => "tabbed" } });
+  assert.equal(loadMonetag(stored.win, MONETAG_MULTITAG), "tabbed");
+
+  const blocked = [
+    make({ location: { pathname: "/portal", href: "https://site.test/portal" } }),
+    make({ location: { pathname: "/chat", href: "https://site.test/chat" } }),
+    make({ location: { pathname: "/scramjet-proxy/x/https%3A%2F%2Ftiktok.com", href: "https://site.test/scramjet-proxy/x" } }, "tabbed"),
+    make({ location: { pathname: "/portal", href: "https://site.test/portal" } }, "tabbed"),
+    make({ top: {} }),
+    make({ top: {} }, "tabbed"),
+  ];
+  for (const { win, appended } of blocked) {
+    for (const tag of MONETAG_TAGS) assert.notEqual(loadMonetag(win, tag), "requested");
+    assert.equal(appended.length, 0);
+  }
+});
+
+test("Tabbed/proxy code never references Monetag directly, and each zone is configured exactly once", async () => {
+  const js = "../artifacts/snorlax-cave/public/assets/js/";
+  for (const file of ["tabbed-browser.js", "tabbed-shortcuts.js", "portal-proxy.js", "scramjet-runtime.js", "settings-workspace.js"]) {
+    const source = await readFile(new URL(js + file, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /monetag|quge5\.com|nap5k\.com/i, file);
+  }
+  const compat = await readFile(new URL("../artifacts/snorlax-cave/proxy/scramjet-compat.js", import.meta.url), "utf8");
+  assert.doesNotMatch(compat, /monetag|quge5\.com/i);
+  const monetag = await readFile(new URL(js + "monetag.js", import.meta.url), "utf8");
+  assert.equal((monetag.match(/zone: "302480"/g) || []).length, 1);
+  assert.doesNotMatch(monetag, /12130783|al5sm\.com/);
+  assert.equal((monetag.match(/quge5\.com\/88\/tag\.min\.js/g) || []).length, 1);
+});
+
+test("exactly one Monetag tag is configured and In-Page Push stays off", async () => {
+  const { MONETAG, MONETAG_TAGS, MONETAG_MULTITAG } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
+  assert.deepEqual(MONETAG_TAGS, [MONETAG_MULTITAG]);
+  assert.equal(MONETAG.enabled, false);
+});

@@ -728,3 +728,14 @@ html[data-tabbed-embed] .about {
     grid-template-columns: repeat(3, 96px);
   }
 }
+
+.tabbed-home-slot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(100%, 380px);
+  height: 280px;
+  border: 0;
+  background: transparent;
+  color-scheme: normal;
+}

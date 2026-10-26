@@ -608,8 +608,27 @@ export function mountTabbedBrowser() {
       entry.internalFrameHost.hidden = !isInternal || (entry.internalRoute !== "games" && entry.internalRoute !== "apps");
       entry.frameHost.hidden = isInternal;
       entry.start.hidden = Boolean(entry.url);
+      syncHomeSlot(entry, selected && entry.internalRoute === "home");
     }
     renderTabs();
+  }
+
+  // The home-only sponsor slot is an isolated document that exists solely while the active tab
+  // shows fdetk://home. Removing the iframe on any other view or tab unloads its timers and listeners.
+  function syncHomeSlot(entry, wanted) {
+    if (!wanted) {
+      entry.homeSlot?.remove();
+      entry.homeSlot = null;
+      return;
+    }
+    if (entry.homeSlot) return;
+    const slot = document.createElement("iframe");
+    slot.className = "tabbed-home-slot";
+    slot.title = "Sponsored";
+    slot.src = "/assets/ads/home-slot.html";
+    slot.setAttribute("scrolling", "no");
+    entry.homeSlot = slot;
+    entry.page.append(slot);
   }
 
   function updateTabTitle(tab, title) {

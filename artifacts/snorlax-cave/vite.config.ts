@@ -7,6 +7,7 @@ import { scramjetPath } from '@mercuryworkshop/scramjet/path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
+import { precompressDirectory } from './proxy/precompress.mjs';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
@@ -96,6 +97,7 @@ const proxyAssetsPlugin = (outDir: string) => ({
         cpSync(source, destination);
       }
     }
+    precompressDirectory(outDir);
   },
 });
 

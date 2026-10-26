@@ -28,9 +28,11 @@ if (build.status !== 0) {
 }
 
 const serverEntry = fileURLToPath(new URL('../artifacts/api-server/dist/index.mjs', import.meta.url));
+// getaddrinfo (Wisp DNS) shares libuv's default 4-thread pool; a burst of concurrent
+// proxied page loads queues behind it. Must be set before the server process starts.
 const start = spawn(process.execPath, ['--enable-source-maps', serverEntry], {
   stdio: 'inherit',
-  env: process.env,
+  env: { ...process.env, UV_THREADPOOL_SIZE: process.env.UV_THREADPOOL_SIZE || '16' },
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

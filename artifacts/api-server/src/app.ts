@@ -4,6 +4,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import healthRouter from "./routes/health";
 import { logger } from "./lib/logger";
+import { precompressedStatic } from "./lib/precompressed";
 
 const app: Express = express();
 
@@ -79,14 +80,22 @@ const sendPage = (filename: string) => {
     });
 };
 
-app.get("/", sendPage("index.html"));
-app.get("/math", sendPage("Games.html"));
-app.get("/english", sendPage("Apps.html"));
-app.get("/about", sendPage("About.html"));
-app.get("/chat", sendPage("chat.html"));
-app.get("/settings", sendPage("Settings.html"));
-app.get("/portal", sendPage("loader.html"));
-app.get("/dashboard", sendPage("agloader.html"));
+const pages: Record<string, string> = {
+  "/": "/index.html",
+  "/math": "/Games.html",
+  "/english": "/Apps.html",
+  "/about": "/About.html",
+  "/chat": "/chat.html",
+  "/settings": "/Settings.html",
+  "/portal": "/loader.html",
+  "/dashboard": "/agloader.html",
+};
+
+app.use(precompressedStatic(staticRoot, pages));
+
+for (const [route, file] of Object.entries(pages)) {
+  app.get(route, sendPage(file.slice(1)));
+}
 
 app.use(
   express.static(staticRoot, {
