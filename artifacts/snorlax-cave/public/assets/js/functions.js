@@ -52,7 +52,12 @@ async function waitForProxyServiceWorker() {
     await waitForActiveServiceWorker(registration);
 }
 
+function isUsableTarget(value) {
+    return typeof value === 'string' && value.trim() !== '' && value.trim() !== 'undefined' && value.trim() !== 'null';
+}
+
 async function openProxyTarget(value) {
+    if (!isUsableTarget(value)) throw new Error('A website address is required');
     const target = new URL(value, window.location.href);
     const engine = getSelectedProxyEngine();
     if (target.protocol !== 'http:' && target.protocol !== 'https:') {
@@ -91,6 +96,7 @@ document.addEventListener('click', (event) => {
 });
   
   function openLink(url) {
+        if (!isUsableTarget(url)) return;
         const target = new URL(/^https?:\/\//i.test(url) ? url : 'https://' + url);
 
         if (target.hostname === 'nvidia.com' || target.hostname.endsWith('.nvidia.com')) {

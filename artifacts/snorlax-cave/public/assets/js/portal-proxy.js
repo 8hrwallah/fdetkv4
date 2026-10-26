@@ -1,5 +1,5 @@
 import { resolveProxyEngine } from "./proxy-engine.js";
-import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-3";
+import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-4";
 
 let frame = document.getElementById("siteurl");
 const status = document.getElementById("proxy-status");

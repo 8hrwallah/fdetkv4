@@ -37,7 +37,7 @@ export function getScramjetController() {
         ...controllerConfig,
         prefix: "/scramjet-proxy/",
         scramjetPath: "/scramjet/scramjet.js",
-        injectPath: "/controller/snorlax.inject.js?v=compat-1",
+        injectPath: "/controller/snorlax.inject.js?v=compat-2",
         wasmPath: "/scramjet/scramjet.wasm",
         virtualWasmPath: "scramjet.wasm.js",
       },

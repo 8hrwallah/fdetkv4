@@ -752,6 +752,77 @@ test("Scramjet compat shim keeps the URL for null history arguments and matches 
   assert.equal(queries.at(-1), "div.plain");
 });
 
+test("Scramjet compat shim also covers history methods assigned on the history instance (Tabbed hook)", async () => {
+  const source = await readFile(new URL("../artifacts/snorlax-cave/proxy/scramjet-compat.js", import.meta.url), "utf8");
+  const calls = [];
+  class History { pushState(...a) { calls.push(["proto-push", ...a]); } replaceState(...a) { calls.push(["proto-replace", ...a]); } }
+  const history = new History();
+  const window = { History, history, location: { href: "https://proxy/page" } };
+  // Mirrors tabbed-browser.js: init.post (inside load) shadows the prototype with own properties.
+  const controller = {
+    load() {
+      for (const method of ["pushState", "replaceState"]) {
+        const original = history[method];
+        history[method] = function (...args) { return Reflect.apply(original, this, args); };
+      }
+    },
+  };
+  const context = vm.createContext({ window, console, $scramjetController: controller });
+  vm.runInContext(source, context);
+  context.$scramjetController.load({});
+  history.replaceState({ a: 1 }, "", undefined);
+  history.pushState({}, "");
+  history.pushState({}, "", null);
+  history.replaceState({}, "", "/next");
+  assert.deepEqual(calls.map((c) => c[3]), ["https://proxy/page", "https://proxy/page", "https://proxy/page", "/next"]);
+});
+
+test("TikTok resolves to a valid HTTPS URL on every entry path and empty targets never become URLs", async () => {
+  assert.equal(APP_SHORTCUTS.find((item) => item.id === "tiktok").url, "https://www.tiktok.com/");
+  for (const input of ["tiktok.com", "www.tiktok.com", "https://www.tiktok.com/"]) {
+    const resolved = resolveAddressInput(input, "duckduckgo");
+    assert.equal(new URL(resolved).protocol, "https:", input);
+    assert.match(new URL(resolved).hostname, /^(www\.)?tiktok\.com$/, input);
+    assert.equal(resolveWorkspaceAddress(input, "duckduckgo", "https://portal.example/"), resolved);
+  }
+  for (const empty of [undefined, null, "", "  "]) {
+    assert.equal(resolveAddressInput(empty, "duckduckgo"), null);
+    assert.equal(resolveWorkspaceAddress(empty, "duckduckgo", "https://portal.example/"), null);
+  }
+
+  const values = new Map();
+  const locations = [];
+  const sandbox = {
+    document: { addEventListener() {} },
+    localStorage: { getItem: (k) => values.get(k) ?? null, setItem: (k, v) => values.set(k, v), removeItem: (k) => values.delete(k) },
+    URL,
+    window: { location: { href: "https://portal.example/", assign: (v) => locations.push(v) } },
+    console,
+  };
+  vm.runInNewContext(functionsSource, sandbox);
+  for (const bad of [undefined, null, "", "  ", "undefined", "null", 42]) {
+    sandbox.openLink(bad);
+    await assert.rejects(() => sandbox.openProxyTarget(bad));
+  }
+  assert.equal(values.has("proxyTargetUrl"), false);
+  assert.deepEqual(locations, []);
+  sandbox.openLink("tiktok.com");
+  assert.equal(values.get("proxyTargetUrl"), "https://tiktok.com/");
+  assert.deepEqual(locations, ["/portal"]);
+});
+
+test("Scramjet runtime loads the compat inject script that Vite builds and appends", async () => {
+  const runtime = await readFile(new URL("../artifacts/snorlax-cave/public/assets/js/scramjet-runtime.js", import.meta.url), "utf8");
+  const vite = await readFile(new URL("../artifacts/snorlax-cave/vite.config.ts", import.meta.url), "utf8");
+  const injectUrl = runtime.match(/injectPath:\s*"(\/controller\/[^"?]+)/)?.[1];
+  assert.equal(injectUrl, "/controller/snorlax.inject.js");
+  assert.match(vite, /url: '\/controller\/snorlax\.inject\.js'[^}]*append: compatShimPath/);
+  assert.match(vite, /compatShimPath = path\.resolve\(import\.meta\.dirname, 'proxy\/scramjet-compat\.js'\)/);
+  // The stock inject script stays untouched for non-Snorlax consumers.
+  assert.match(vite, /url: '\/controller\/controller\.inject\.js', source: [^}]*\}/);
+  assert.doesNotMatch(vite.match(/url: '\/controller\/controller\.inject\.js'[^}]*\}/)[0], /append/);
+});
+
 test("Monetag loads only on first-party Casual pages, once, and is inert without a tag", async () => {
   const { loadMonetag } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
   const make = (over = {}) => {
@@ -765,7 +836,7 @@ test("Monetag loads only on first-party Casual pages, once, and is inert without
     win.top = over.top ?? win;
     return { win, appended };
   };
-  const cfg = { enabled: true, src: "https://example.invalid/tag.js", id: "m" };
+  const cfg = { enabled: true, zone: "1", src: "https://example.invalid/tag.js", id: "m" };
   assert.equal(loadMonetag(make().win, { ...cfg, src: "" }), "disabled");
   assert.equal(loadMonetag(make().win, { ...cfg, enabled: false }), "disabled");
   assert.equal(loadMonetag(make({ top: {} }).win, cfg), "framed");
