@@ -1,4 +1,4 @@
-import { cpSync, createReadStream, existsSync, mkdirSync, statSync } from 'node:fs';
+import { cpSync, createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'path';
 import { pipeline } from 'node:stream';
 import { promisify } from 'node:util';
@@ -57,11 +57,13 @@ const trimDuplicateDocumentPlugin = () => ({
 const pipelineAsync = promisify(pipeline);
 const controllerPath = path.dirname(fileURLToPath(import.meta.resolve('@mercuryworkshop/scramjet-controller')));
 const libcurlPath = path.dirname(fileURLToPath(import.meta.resolve('@mercuryworkshop/libcurl-transport')));
-const proxyAssets = [
+const compatShimPath = path.resolve(import.meta.dirname, 'proxy/scramjet-compat.js');
+const proxyAssets: { url: string; source: string; append?: string }[] = [
   { url: '/scramjet/scramjet.js', source: path.join(scramjetPath, 'scramjet.js') },
   { url: '/scramjet/scramjet.wasm', source: path.join(scramjetPath, 'scramjet.wasm') },
   { url: '/controller/controller.api.js', source: path.join(controllerPath, 'controller.api.js') },
   { url: '/controller/controller.inject.js', source: path.join(controllerPath, 'controller.inject.js') },
+  { url: '/controller/snorlax.inject.js', source: path.join(controllerPath, 'controller.inject.js'), append: compatShimPath },
   { url: '/controller/controller.sw.js', source: path.join(controllerPath, 'controller.sw.js') },
   { url: '/libcurl/index.mjs', source: path.join(libcurlPath, 'index.mjs') },
 ];
@@ -77,14 +79,22 @@ const proxyAssetsPlugin = (outDir: string) => ({
 
       response.setHeader('Content-Type', asset.source.endsWith('.wasm') ? 'application/wasm' : 'text/javascript; charset=utf-8');
       response.setHeader('Cache-Control', 'public, max-age=3600');
+      if (asset.append) {
+        response.end(`${readFileSync(asset.source, 'utf8')}\n${readFileSync(asset.append, 'utf8')}`);
+        return;
+      }
       await pipelineAsync(createReadStream(asset.source), response);
     });
   },
   writeBundle() {
-    for (const { url, source } of proxyAssets) {
+    for (const { url, source, append } of proxyAssets) {
       const destination = path.join(outDir, url.slice(1));
       mkdirSync(path.dirname(destination), { recursive: true });
-      cpSync(source, destination);
+      if (append) {
+        writeFileSync(destination, `${readFileSync(source, 'utf8')}\n${readFileSync(append, 'utf8')}`);
+      } else {
+        cpSync(source, destination);
+      }
     }
   },
 });

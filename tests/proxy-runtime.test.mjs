@@ -722,3 +722,58 @@ test("startup loads only the selected interface's scripts and defaults to Casual
   assert.match(firstDocument, /el\.async = false/);
   assert.equal((firstDocument.match(/fdetkInterface !== "tabbed"\) document\.write/g) || []).length, 3);
 });
+
+test("Scramjet compat shim keeps the URL for null history arguments and matches encoded script selectors", async () => {
+  const source = await readFile(new URL("../artifacts/snorlax-cave/proxy/scramjet-compat.js", import.meta.url), "utf8");
+  const calls = [];
+  class History { pushState(...a) { calls.push(["push", ...a]); } replaceState(...a) { calls.push(["replace", ...a]); } }
+  const queries = [];
+  class Document { querySelector(s) { queries.push(s); return null; } querySelectorAll(s) { queries.push(s); return []; } }
+  class Element extends Document {}
+  class DocumentFragment extends Document {}
+  const window = { History, Document, Element, DocumentFragment, location: { href: "https://proxy/x" } };
+  const loads = [];
+  const controller = { load: (...a) => loads.push(a) };
+  // The shim reassigns the global, so read it back from the context.
+  const context = vm.createContext({ window, console, $scramjetController: controller });
+  vm.runInContext(source, context);
+  context.$scramjetController.load({ ok: true });
+  assert.deepEqual(loads.at(-1), [{ ok: true }]);
+  const history = new History();
+  history.replaceState(null, "", undefined);
+  history.pushState({}, "", null);
+  history.replaceState({}, "", "/real");
+  assert.deepEqual(calls[0].slice(3), ["https://proxy/x"]);
+  assert.deepEqual(calls[1].slice(3), ["https://proxy/x"]);
+  assert.equal(calls[2][3], "/real");
+  new Document().querySelector('script[src*="/secsdk_runtime_bundler"]');
+  assert.equal(queries.at(-1), 'script[src*="/secsdk_runtime_bundler"],script[src*="%2Fsecsdk_runtime_bundler"]');
+  new Document().querySelector("div.plain");
+  assert.equal(queries.at(-1), "div.plain");
+});
+
+test("Monetag loads only on first-party Casual pages, once, and is inert without a tag", async () => {
+  const { loadMonetag } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
+  const make = (over = {}) => {
+    const appended = [];
+    const win = {
+      location: { pathname: "/", href: "https://site.test/" },
+      document: { head: { append: (n) => appended.push(n) }, getElementById: () => null, createElement: () => ({ dataset: {}, remove() {} }) },
+      fdetkInterface: "casual",
+      ...over,
+    };
+    win.top = over.top ?? win;
+    return { win, appended };
+  };
+  const cfg = { enabled: true, src: "https://example.invalid/tag.js", id: "m" };
+  assert.equal(loadMonetag(make().win, { ...cfg, src: "" }), "disabled");
+  assert.equal(loadMonetag(make().win, { ...cfg, enabled: false }), "disabled");
+  assert.equal(loadMonetag(make({ top: {} }).win, cfg), "framed");
+  assert.equal(loadMonetag(make({ location: { pathname: "/portal", href: "https://site.test/portal" } }).win, cfg), "proxy-page");
+  assert.equal(loadMonetag(make({ fdetkInterface: "tabbed" }).win, cfg), "tabbed");
+  assert.equal(loadMonetag(make().win, { ...cfg, src: "http://insecure.test/t.js" }), "invalid-src");
+  const { win, appended } = make();
+  assert.equal(loadMonetag(win, cfg), "requested");
+  assert.equal(loadMonetag(win, cfg), "already-requested");
+  assert.equal(appended.length, 1);
+});

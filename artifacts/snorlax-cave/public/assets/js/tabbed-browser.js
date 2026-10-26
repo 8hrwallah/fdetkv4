@@ -1,6 +1,6 @@
 import { resolveAddressInput } from "./search.js";
 import { MAX_SHORTCUTS, createShortcutId, loadShortcuts, saveShortcuts, shortcutIconUrl, validateShortcut } from "./tabbed-shortcuts.js?v=1";
-import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-1";
+import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-3";
 
 const themes = new Set(["midnight", "obsidian", "slate", "light"]);
 const accents = new Set(["violet", "ice", "silver"]);
