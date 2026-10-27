@@ -1,6 +1,6 @@
 import { resolveAddressInput } from "./search.js";
 import { MAX_SHORTCUTS, createShortcutId, loadShortcuts, saveShortcuts, shortcutIconUrl, validateShortcut } from "./tabbed-shortcuts.js?v=1";
-import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-4";
+import { getScramjetController } from "./scramjet-runtime.js?v=shared-runtime-5";
 
 const themes = new Set(["midnight", "obsidian", "slate", "light"]);
 const accents = new Set(["violet", "ice", "silver"]);
@@ -228,7 +228,6 @@ export function mountTabbedBrowser() {
       event.preventDefault();
       navigate(tab, search.value);
     });
-
     const grid = element("div", "ntp-shortcuts");
     grid.setAttribute("role", "list");
     grid.setAttribute("aria-label", "Shortcuts");
@@ -608,27 +607,8 @@ export function mountTabbedBrowser() {
       entry.internalFrameHost.hidden = !isInternal || (entry.internalRoute !== "games" && entry.internalRoute !== "apps");
       entry.frameHost.hidden = isInternal;
       entry.start.hidden = Boolean(entry.url);
-      syncHomeSlot(entry, selected && entry.internalRoute === "home");
     }
     renderTabs();
-  }
-
-  // The home-only sponsor slot is an isolated document that exists solely while the active tab
-  // shows fdetk://home. Removing the iframe on any other view or tab unloads its timers and listeners.
-  function syncHomeSlot(entry, wanted) {
-    if (!wanted) {
-      entry.homeSlot?.remove();
-      entry.homeSlot = null;
-      return;
-    }
-    if (entry.homeSlot) return;
-    const slot = document.createElement("iframe");
-    slot.className = "tabbed-home-slot";
-    slot.title = "Sponsored";
-    slot.src = "/assets/ads/home-slot.html";
-    slot.setAttribute("scrolling", "no");
-    entry.homeSlot = slot;
-    entry.page.append(slot);
   }
 
   function updateTabTitle(tab, title) {
@@ -684,7 +664,8 @@ export function mountTabbedBrowser() {
   }
 
   function selectTab(id) {
-    if (!tabs.some((tab) => tab.id === id)) return;
+    const selected = tabs.find((tab) => tab.id === id);
+    if (!selected) return;
     activeId = id;
     updateControls();
   }
@@ -747,6 +728,9 @@ export function mountTabbedBrowser() {
     tab.frameHost.append(iframe);
     if (window.$scramjet?.Tap) {
       window.$scramjet.Tap.tap(tab.frame.hooks.init.post, ({ window: frameWindow }) => {
+        // One set of listeners and history wrappers per frame window, even if the hook fires again.
+        if (frameWindow.__fdetkTabbedHooks) return;
+        frameWindow.__fdetkTabbedHooks = true;
         const syncUrl = (mode = "push") => {
           const remoteUrl = getRemoteUrl(tab.frame, controller);
           if (remoteUrl && /^https?:\/\//i.test(remoteUrl)) recordUrl(tab, remoteUrl, mode);
@@ -783,6 +767,7 @@ export function mountTabbedBrowser() {
       );
     }
     iframe.addEventListener("load", () => {
+      if (tab.internalRoute) return;
       if (tab.timeout) clearTimeout(tab.timeout);
       tab.loading = false;
       tab.message.textContent = "";

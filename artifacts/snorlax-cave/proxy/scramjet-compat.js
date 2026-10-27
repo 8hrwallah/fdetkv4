@@ -24,11 +24,14 @@
   // or null navigates to ".../undefined". Native browsers keep the current URL instead.
   function wrapHistoryMethod(holder, name) {
     var original = holder[name];
-    if (typeof original !== "function") return;
-    holder[name] = function (state, title, url) {
+    // Idempotent: load() may run more than once per document, and wrappers must not stack.
+    if (typeof original !== "function" || original.__snorlaxCompat) return;
+    var wrapped = function (state, title, url) {
       if (url == null) return original.call(this, state, title, window.location.href);
       return original.apply(this, arguments);
     };
+    wrapped.__snorlaxCompat = true;
+    holder[name] = wrapped;
   }
 
   function installHistoryCompat() {
@@ -59,11 +62,13 @@
       if (!proto) return;
       ["querySelector", "querySelectorAll"].forEach(function (name) {
         var original = proto[name];
-        if (typeof original !== "function") return;
-        proto[name] = function (selector) {
+        if (typeof original !== "function" || original.__snorlaxCompat) return;
+        var wrapped = function (selector) {
           var rewritten = withEncodedSlashes(selector);
           return rewritten === selector ? original.apply(this, arguments) : original.call(this, rewritten);
         };
+        wrapped.__snorlaxCompat = true;
+        proto[name] = wrapped;
       });
     });
   }

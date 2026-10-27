@@ -720,7 +720,7 @@ test("startup loads only the selected interface's scripts and defaults to Casual
   assert.match(firstDocument, /fdetkLoadScripts\("casual", \[\s*\["\/uv\/uv\.bundle\.js"\],\s*\["\/uv\/uv\.config\.js"\],/);
   assert.doesNotMatch(firstDocument, /fdetkWriteScript/);
   assert.match(firstDocument, /el\.async = false/);
-  assert.equal((firstDocument.match(/fdetkInterface !== "tabbed"\) document\.write/g) || []).length, 3);
+  assert.doesNotMatch(firstDocument, /document\.write\(/);
 });
 
 test("Scramjet compat shim keeps the URL for null history arguments and matches encoded script selectors", async () => {
@@ -823,32 +823,6 @@ test("Scramjet runtime loads the compat inject script that Vite builds and appen
   assert.doesNotMatch(vite.match(/url: '\/controller\/controller\.inject\.js'[^}]*\}/)[0], /append/);
 });
 
-test("Monetag loads only on first-party Casual pages, once, and is inert without a tag", async () => {
-  const { loadMonetag } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
-  const make = (over = {}) => {
-    const appended = [];
-    const win = {
-      location: { pathname: "/", href: "https://site.test/" },
-      document: { head: { append: (n) => appended.push(n) }, getElementById: () => null, createElement: () => ({ dataset: {}, remove() {} }) },
-      fdetkInterface: "casual",
-      ...over,
-    };
-    win.top = over.top ?? win;
-    return { win, appended };
-  };
-  const cfg = { enabled: true, zone: "1", src: "https://example.invalid/tag.js", id: "m" };
-  assert.equal(loadMonetag(make().win, { ...cfg, src: "" }), "disabled");
-  assert.equal(loadMonetag(make().win, { ...cfg, enabled: false }), "disabled");
-  assert.equal(loadMonetag(make({ top: {} }).win, cfg), "framed");
-  assert.equal(loadMonetag(make({ location: { pathname: "/portal", href: "https://site.test/portal" } }).win, cfg), "proxy-page");
-  assert.equal(loadMonetag(make({ fdetkInterface: "tabbed" }).win, cfg), "tabbed");
-  assert.equal(loadMonetag(make().win, { ...cfg, src: "http://insecure.test/t.js" }), "invalid-src");
-  const { win, appended } = make();
-  assert.equal(loadMonetag(win, cfg), "requested");
-  assert.equal(loadMonetag(win, cfg), "already-requested");
-  assert.equal(appended.length, 1);
-});
-
 test("build-time precompression writes verified .br/.gz siblings and a manifest, skipping small and binary files", async () => {
   const { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
@@ -943,109 +917,143 @@ test("server start script raises the libuv threadpool for concurrent Wisp DNS lo
   assert.match(source, /UV_THREADPOOL_SIZE: process\.env\.UV_THREADPOOL_SIZE \|\| '16'/);
 });
 
-test("Monetag is never bare in the shell; Casual pages load monetag.js and Tabbed never does", async () => {
-  const base = "../artifacts/snorlax-cave/";
-  const homepage = await readFile(new URL(base + "index.html", import.meta.url), "utf8");
-  assert.doesNotMatch(homepage, /quge5\.com|nap5k\.com|al5sm\.com|n6wxm\.com|data-zone=/);
-  assert.match(homepage.match(/fdetkLoadScripts\("casual", \[[\s\S]*?\]\);/)[0], /\/assets\/js\/monetag\.js/);
-  assert.doesNotMatch(homepage.match(/fdetkLoadScripts\("tabbed", \[[\s\S]*?\]\);/)[0], /monetag/);
-  assert.doesNotMatch(homepage, /<script[^>]+src="\/assets\/js\/monetag\.js/);
-  for (const file of ["Settings.html", "Games.html", "Apps.html", "About.html"]) {
-    const source = await readFile(new URL(`${base}public/${file}`, import.meta.url), "utf8");
-    assert.equal((source.match(/assets\/js\/monetag\.js/g) || []).length, 1, file);
-    assert.doesNotMatch(source, /quge5\.com|nap5k\.com|data-zone=/, file);
-  }
-  for (const file of ["loader.html", "chat.html"]) {
-    const source = await readFile(new URL(`${base}public/${file}`, import.meta.url), "utf8");
-    assert.doesNotMatch(source, /monetag|quge5\.com|nap5k\.com/i, file);
-  }
+test("compat shim is idempotent: running load() repeatedly never stacks history or selector wrappers", async () => {
+  const source = await readFile(new URL("../artifacts/snorlax-cave/proxy/scramjet-compat.js", import.meta.url), "utf8");
+  const calls = [];
+  const queries = [];
+  class History { pushState(...a) { calls.push(a); } replaceState(...a) { calls.push(a); } }
+  class Document { querySelector(s) { queries.push(s); return null; } querySelectorAll() { return []; } }
+  const history = new History();
+  history.pushState = history.pushState.bind(history);
+  const window = { History, history, Document, location: { href: "https://proxy/p" } };
+  const context = vm.createContext({ window, console, $scramjetController: { load() {} } });
+  vm.runInContext(source, context);
+  const ownBefore = history.pushState;
+  for (let i = 0; i < 5; i += 1) context.$scramjetController.load();
+  const protoWrapper = History.prototype.replaceState;
+  const docWrapper = Document.prototype.querySelector;
+  context.$scramjetController.load();
+  assert.equal(History.prototype.replaceState, protoWrapper);
+  assert.equal(Document.prototype.querySelector, docWrapper);
+  assert.equal(history.pushState.__snorlaxCompat, true);
+  assert.equal(history.pushState.__snorlaxCompat && history.pushState === history.pushState, true);
+  assert.notEqual(history.pushState, ownBefore);
+  new Document().querySelector('script[src*="/a/b"]');
+  assert.deepEqual(queries, ['script[src*="/a/b"],script[src*="%2Fa%2Fb"]']);
+  history.pushState({}, "", undefined);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][2], "https://proxy/p");
 });
 
-test("Tabbed mounts the ad slot only on the active fdetk://home tab and removes it elsewhere", async () => {
-  const slot = await readFile(new URL("../artifacts/snorlax-cave/public/assets/ads/home-slot.html", import.meta.url), "utf8");
-  assert.equal((slot.match(/<script/g) || []).length, 1);
-  assert.match(slot, /<script src="https:\/\/quge5\.com\/88\/tag\.min\.js" data-zone="302480" async data-cfasync="false"><\/script>/);
-  const tabbed = await readFile(new URL("../artifacts/snorlax-cave/public/assets/js/tabbed-browser.js", import.meta.url), "utf8");
-  assert.match(tabbed, /syncHomeSlot\(entry, selected && entry\.internalRoute === "home"\)/);
-  assert.match(tabbed, /entry\.homeSlot\?\.remove\(\)/);
-  assert.equal((tabbed.match(/\/assets\/ads\/home-slot\.html/g) || []).length, 1);
-  assert.doesNotMatch(tabbed, /quge5\.com|monetag/i);
+test("Tabbed installs its frame hooks once per proxied window", async () => {
+  const source = await readFile(new URL("../artifacts/snorlax-cave/public/assets/js/tabbed-browser.js", import.meta.url), "utf8");
+  assert.equal((source.match(/hooks\.init\.post/g) || []).length, 1);
+  assert.match(source, /iframe\.addEventListener\("load", \(\) => \{\s*if \(tab\.internalRoute\) return;/);
+  assert.match(source, /if \(frameWindow\.__fdetkTabbedHooks\) return;\s*frameWindow\.__fdetkTabbedHooks = true;/);
+  assert.equal((source.match(/addEventListener\("popstate"/g) || []).length, 1);
+  assert.doesNotMatch(source, /setInterval|MutationObserver/);
 });
 
-test("Monetag runs once on Casual pages only, never in Tabbed, proxy routes or frames", async () => {
-  const { loadMonetag, scheduleMonetag, MONETAG_TAGS, MONETAG_MULTITAG, CASUAL_AD_PATHS } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
-  assert.equal(MONETAG_MULTITAG.zone, "302480");
-  assert.equal(MONETAG_MULTITAG.src, "https://quge5.com/88/tag.min.js");
-  assert.equal(new Set(MONETAG_TAGS.map((tag) => tag.zone)).size, MONETAG_TAGS.length);
-  assert.equal(new Set(MONETAG_TAGS.map((tag) => tag.id)).size, MONETAG_TAGS.length);
-  const make = (over = {}, mode = "casual") => {
-    const appended = [];
-    const win = {
-      location: { pathname: "/", href: "https://site.test/" },
-      document: {
-        readyState: "complete",
-        head: { append: (n) => appended.push(n) },
-        documentElement: { dataset: { interfaceMode: mode } },
-        getElementById: () => null,
-        createElement: () => ({ dataset: {}, remove() {} }),
-      },
-      fdetkInterface: mode,
-      setTimeout: (fn) => fn(),
-      addEventListener() {},
-      ...over,
-    };
-    win.top = over.top ?? win;
-    return { win, appended };
+// Mimics libcurl.js: push-based stream, no cancel handler, request freed only via the abort signal.
+function mockCurlTransport() {
+  const state = { aborted: 0, freed: 0, seen: [], enqueue: null, close: null };
+  return {
+    state,
+    async request(remote, method, body, headers, signal) {
+      state.seen.push({ remote: remote.href, method, range: headers.get("range"), hasSignal: Boolean(signal) });
+      let controller;
+      const stream = new ReadableStream({ start(c) { controller = c; } });
+      state.enqueue = (chunk) => { try { controller.enqueue(chunk); } catch { state.freed += 1; } };
+      state.close = () => controller.close();
+      signal?.addEventListener("abort", () => { state.aborted += 1; state.freed += 1; });
+      return { body: stream, headers: [["content-range", "bytes 0-9/10"]], status: 206, statusText: "Partial Content" };
+    },
   };
+}
 
-  const casual = make();
-  scheduleMonetag(casual.win);
-  scheduleMonetag(casual.win);
-  assert.deepEqual(casual.appended.map((s) => s.dataset.zone), ["302480"]);
-  assert.equal(casual.appended[0].dataset.cfasync, "false");
-
-  for (const pathname of CASUAL_AD_PATHS) {
-    const page = make({ location: { pathname, href: "https://site.test" + pathname } });
-    assert.equal(loadMonetag(page.win, MONETAG_MULTITAG), "requested", pathname);
-    assert.equal(page.appended.length, 1);
-  }
-  const tabbed = make({}, "tabbed");
-  scheduleMonetag(tabbed.win);
-  assert.equal(tabbed.appended.length, 0);
-  assert.equal(loadMonetag(make({}, "tabbed").win, MONETAG_MULTITAG), "tabbed");
-  const stored = make({ localStorage: { getItem: () => "tabbed" } });
-  assert.equal(loadMonetag(stored.win, MONETAG_MULTITAG), "tabbed");
-
-  const blocked = [
-    make({ location: { pathname: "/portal", href: "https://site.test/portal" } }),
-    make({ location: { pathname: "/chat", href: "https://site.test/chat" } }),
-    make({ location: { pathname: "/scramjet-proxy/x/https%3A%2F%2Ftiktok.com", href: "https://site.test/scramjet-proxy/x" } }, "tabbed"),
-    make({ location: { pathname: "/portal", href: "https://site.test/portal" } }, "tabbed"),
-    make({ top: {} }),
-    make({ top: {} }, "tabbed"),
-  ];
-  for (const { win, appended } of blocked) {
-    for (const tag of MONETAG_TAGS) assert.notEqual(loadMonetag(win, tag), "requested");
-    assert.equal(appended.length, 0);
-  }
+test("controller passes no abort signal to the transport and libcurl streams have no cancel handler", async () => {
+  const api = await readFile(new URL("../artifacts/snorlax-cave/node_modules/@mercuryworkshop/scramjet-controller/dist/controller.api.js", import.meta.url), "utf8");
+  assert.match(api, /transport\.request\(new URL\(\w+\),\w+,\w+,\w+,void 0\)/);
+  const curl = await readFile(new URL("../artifacts/snorlax-cave/node_modules/@mercuryworkshop/libcurl-transport/dist/index.mjs", import.meta.url), "utf8");
+  const streamDef = curl.slice(curl.indexOf("stream_response(url"), curl.indexOf("stream_response(url") + 400);
+  assert.doesNotMatch(streamDef, /cancel\s*\(/);
 });
 
-test("Tabbed/proxy code never references Monetag directly, and each zone is configured exactly once", async () => {
-  const js = "../artifacts/snorlax-cave/public/assets/js/";
-  for (const file of ["tabbed-browser.js", "tabbed-shortcuts.js", "portal-proxy.js", "scramjet-runtime.js", "settings-workspace.js"]) {
-    const source = await readFile(new URL(js + file, import.meta.url), "utf8");
-    assert.doesNotMatch(source, /monetag|quge5\.com|nap5k\.com/i, file);
-  }
-  const compat = await readFile(new URL("../artifacts/snorlax-cave/proxy/scramjet-compat.js", import.meta.url), "utf8");
-  assert.doesNotMatch(compat, /monetag|quge5\.com/i);
-  const monetag = await readFile(new URL(js + "monetag.js", import.meta.url), "utf8");
-  assert.equal((monetag.match(/zone: "302480"/g) || []).length, 1);
-  assert.doesNotMatch(monetag, /12130783|al5sm\.com/);
-  assert.equal((monetag.match(/quge5\.com\/88\/tag\.min\.js/g) || []).length, 1);
+test("cancelling a proxied media body aborts the underlying request and keeps status, range headers and chunks intact", async () => {
+  const { cancelableTransport } = await import("../artifacts/snorlax-cave/public/assets/js/scramjet-runtime.js");
+  const transport = cancelableTransport(mockCurlTransport());
+  assert.equal(cancelableTransport(transport), transport);
+  const headers = new Headers({ range: "bytes=0-" });
+  const response = await transport.request(new URL("https://media.example/v.mp4?sig=abc&exp=1"), "GET", null, headers, undefined);
+  assert.equal(response.status, 206);
+  assert.deepEqual(response.headers, [["content-range", "bytes 0-9/10"]]);
+  assert.deepEqual(transport.state.seen[0], { remote: "https://media.example/v.mp4?sig=abc&exp=1", method: "GET", range: "bytes=0-", hasSignal: true });
+  const reader = response.body.getReader();
+  transport.state.enqueue(new Uint8Array([1, 2, 3]));
+  assert.deepEqual([...(await reader.read()).value], [1, 2, 3]);
+  await reader.cancel("seek");
+  assert.equal(transport.state.aborted, 1);
+  assert.equal(transport.state.freed, 1);
 });
 
-test("exactly one Monetag tag is configured and In-Page Push stays off", async () => {
-  const { MONETAG, MONETAG_TAGS, MONETAG_MULTITAG } = await import("../artifacts/snorlax-cave/public/assets/js/monetag.js");
-  assert.deepEqual(MONETAG_TAGS, [MONETAG_MULTITAG]);
-  assert.equal(MONETAG.enabled, false);
+test("a completed media body is not aborted, and a caller abort signal still aborts the request", async () => {
+  const { cancelableTransport } = await import("../artifacts/snorlax-cave/public/assets/js/scramjet-runtime.js");
+  const done = cancelableTransport(mockCurlTransport());
+  const response = await done.request(new URL("https://media.example/a"), "GET", null, new Headers());
+  const reader = response.body.getReader();
+  done.state.enqueue(new Uint8Array([9]));
+  done.state.close();
+  assert.equal((await reader.read()).done, false);
+  assert.equal((await reader.read()).done, true);
+  assert.equal(done.state.aborted, 0);
+
+  const caller = new AbortController();
+  const linked = cancelableTransport(mockCurlTransport());
+  await linked.request(new URL("https://media.example/b"), "GET", null, new Headers(), caller.signal);
+  caller.abort();
+  assert.equal(linked.state.aborted, 1);
+});
+
+test("every Scramjet controller wraps its libcurl transport once and bodiless responses pass through", async () => {
+  const runtime = await readFile(new URL("../artifacts/snorlax-cave/public/assets/js/scramjet-runtime.js", import.meta.url), "utf8");
+  assert.equal((runtime.match(/new LibcurlClient\(/g) || []).length, 1);
+  assert.match(runtime, /transport: cancelableTransport\(new LibcurlClient\(\{ wisp: wispUrl \}\)\)/);
+  const { cancelableTransport } = await import("../artifacts/snorlax-cave/public/assets/js/scramjet-runtime.js");
+  const empty = cancelableTransport({ async request() { return { body: null, headers: [], status: 204, statusText: "" }; } });
+  assert.equal((await empty.request(new URL("https://x.example/"), "GET", null, new Headers())).body, null);
+});
+
+function fixedTransport(headers, chunks) {
+  return {
+    async request() {
+      let i = 0;
+      return {
+        status: 206, statusText: "", headers,
+        body: new ReadableStream({ pull(c) { i < chunks.length ? c.enqueue(chunks[i++]) : c.close(); } }),
+      };
+    },
+  };
+}
+
+async function drain(response) {
+  const reader = response.body.getReader();
+  let bytes = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return bytes;
+    bytes += value.byteLength;
+  }
+}
+
+test("a body that ends short of its Content-Length errors; complete, encoded and HEAD bodies do not", async () => {
+  const { cancelableTransport } = await import("../artifacts/snorlax-cave/public/assets/js/scramjet-runtime.js");
+  const req = (t, method = "GET") => t.request(new URL("https://m.example/"), method, null, new Headers());
+  const short = cancelableTransport(fixedTransport([["Content-Length", "10"]], [new Uint8Array(4)]));
+  await assert.rejects(async () => drain(await req(short)), /ended after 4 of 10 bytes/);
+  const whole = cancelableTransport(fixedTransport([["Content-Length", "6"]], [new Uint8Array(4), new Uint8Array(2)]));
+  assert.equal(await drain(await req(whole)), 6);
+  const encoded = cancelableTransport(fixedTransport([["Content-Length", "10"], ["Content-Encoding", "gzip"]], [new Uint8Array(4)]));
+  assert.equal(await drain(await req(encoded)), 4);
+  const head = cancelableTransport(fixedTransport([["Content-Length", "10"]], []));
+  assert.equal(await drain(await req(head, "HEAD")), 0);
 });

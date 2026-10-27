@@ -54,7 +54,6 @@ GeForce NOW's `play.geforcenow.com` app shortcut uses the standard `openLink` â†
 | Discord SRI / WOFF2 / challenge-script errors | The challenge-script 404 and HTML-MIME rejection were reproduced. A sampled font response had a valid WOFF2 signature; no SRI attributes were present on the sampled login document. The supplied CSS SRI mismatch and other font failures were not reproduced, and no upstream-byte comparison was made. No integrity policy or challenge response was changed. |
 | NVIDIA queue, ad area, authentication, and game APIs | Not reached. The page remained at the welcome/EULA screen, displayed NVIDIA's unsupported-browser warning, and logged `requestStorageAccess: Permission denied`; no queue, ad request, account login, or game launch was tested. |
 | NVIDIA native IPC and streaming capability | The browser logged a missing `CrimsonNative` `QUERY_IPC_EXTENSION_MESSAGE`/`Overrides.getConfig` command. This indicates an unavailable native-app interface, not a proxy-generated successful response. Game streaming was not tested. |
-| Home-page ad script | `topcreativeformat.com` returned `ERR_NAME_NOT_RESOLVED` in the local browser, delaying home-page parsing. This is separate from NVIDIA's unobserved in-game ad request and was not changed. |
 | Discord authentication, API, and media | Not run. No authenticated Discord session or media request was available. |
 
 ## Site matrix

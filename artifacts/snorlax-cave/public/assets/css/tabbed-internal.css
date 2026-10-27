@@ -318,11 +318,7 @@ html[data-tabbed-embed] body {
 
 html[data-tabbed-embed] body > nav,
 html[data-tabbed-embed] body > br,
-html[data-tabbed-embed] body > #container-f477be14226dd5571772175c1864a940,
-html[data-tabbed-embed] body > #ad_300x250,
-html[data-tabbed-embed] body > #ad_320x50,
-html[data-tabbed-embed] body > #ads160x600_1,
-html[data-tabbed-embed] body > #ads160x600_2 {
+html[data-tabbed-embed] body > #container-f477be14226dd5571772175c1864a940 {
   display: none !important;
 }
 
@@ -727,15 +723,4 @@ html[data-tabbed-embed] .about {
   .ntp-shortcuts {
     grid-template-columns: repeat(3, 96px);
   }
-}
-
-.tabbed-home-slot {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: min(100%, 380px);
-  height: 280px;
-  border: 0;
-  background: transparent;
-  color-scheme: normal;
 }
