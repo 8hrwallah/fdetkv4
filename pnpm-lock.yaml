@@ -410,11 +410,11 @@ importers:
         specifier: ^2.0.5
         version: 2.0.5
       '@mercuryworkshop/scramjet':
-        specifier: 2.0.67-alpha.2
-        version: 2.0.67-alpha.2
+        specifier: https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz
+        version: https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz
       '@mercuryworkshop/scramjet-controller':
-        specifier: 0.0.14
-        version: 0.0.14(@mercuryworkshop/scramjet@2.0.67-alpha.2)
+        specifier: https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-controller-0.0.14.tgz
+        version: https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-controller-0.0.14.tgz(@mercuryworkshop/scramjet@https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz)
     devDependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
@@ -812,13 +812,15 @@ packages:
   '@mercuryworkshop/proxy-transports@1.0.2':
     resolution: {integrity: sha512-zgD+JMYNSx8LxVLWwGPPVnoDHjoh1GqqwUJIjhIwCwhy+Z7g+MhmiTJvCcRPAo7qXXbqJwIrpBJduRSOrjMV7g==}
 
-  '@mercuryworkshop/scramjet-controller@0.0.14':
-    resolution: {integrity: sha512-0Sfn0xcUM69h6pIaPmntwFYcAOLyNzGPE6AQSMwrakYUFhJNLbEYWMa4actp6w3jVnwpQ9suggOO1bKrX5zioA==}
+  '@mercuryworkshop/scramjet-controller@https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-controller-0.0.14.tgz':
+    resolution: {integrity: sha512-HLamFXWoi/F6YONMUdm0zWE5I2ihKI7mRdKgH/9pdQ2IBJ3xVz+zHJoK2ovoRwwe9Y+wfeDpPAiHjH/8HilZaQ==, tarball: https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-controller-0.0.14.tgz}
+    version: 0.0.14
     peerDependencies:
       '@mercuryworkshop/scramjet': '*'
 
-  '@mercuryworkshop/scramjet@2.0.67-alpha.2':
-    resolution: {integrity: sha512-E/vmwQTqIoYmPLDb76t8Nv7O9kUdv8C6mRejdsT8APk5vBUYyIMI6CO0gyUVRX77Fc/NyoopfZNSaJ4qufJEww==}
+  '@mercuryworkshop/scramjet@https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz':
+    resolution: {integrity: sha512-7rlV8t+UP55RyXbTvgWC3Ra35MVa7yc28FEZoCwlEcr30GqHSO8UBO8gzLUQ5kkQGwbKrOhtU1PHcsmH8p2s8w==, tarball: https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz}
+    version: 2.0.67-alpha.2
 
   '@mercuryworkshop/wisp-js@0.4.1':
     resolution: {integrity: sha512-104LwiXiuhti/e32gmv0Da0u0yuLFDHX8JawCzleTPWJ5t5qTX4EYi4E7/ucbjBPN9wwVPWHE5g5yGqzl/NzQA==}
@@ -3497,13 +3499,13 @@ snapshots:
 
   '@mercuryworkshop/proxy-transports@1.0.2': {}
 
-  '@mercuryworkshop/scramjet-controller@0.0.14(@mercuryworkshop/scramjet@2.0.67-alpha.2)':
+  '@mercuryworkshop/scramjet-controller@https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-controller-0.0.14.tgz(@mercuryworkshop/scramjet@https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz)':
     dependencies:
       '@fastify/deepmerge': 3.2.2
       '@mercuryworkshop/proxy-transports': 1.0.2
-      '@mercuryworkshop/scramjet': 2.0.67-alpha.2
+      '@mercuryworkshop/scramjet': https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz
 
-  '@mercuryworkshop/scramjet@2.0.67-alpha.2':
+  '@mercuryworkshop/scramjet@https://github.com/MercuryWorkshop/scramjet/releases/download/latest/mercuryworkshop-scramjet-2.0.67-alpha.2.tgz':
     dependencies:
       '@mercuryworkshop/proxy-transports': 1.0.2
       dom-serializer: 2.0.0
