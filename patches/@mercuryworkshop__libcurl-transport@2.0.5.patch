@@ -1,0 +1,176 @@
+diff --git a/dist/index.js b/dist/index.js
+index f4771787888d9aca38844863b7510f4c5bd30b8d..503298e2f4da58a6c5d94dc5d7dee055ab7d95c1 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -5630,19 +5630,25 @@ Several C libraries are used, and their licenses are listed below:
+       _session_set_options(this.session_ptr, connections_limit, cache_limit, host_conn_limit);
+     }
+     end_callback(request_id, error) {
++      const callbacks = this.request_callbacks[request_id];
++      if (!callbacks) return;
+       this.active_requests--;
+-      this.request_callbacks[request_id].end(error);
+       delete this.request_callbacks[request_id];
++      callbacks.end(error);
+     }
+     data_callback(request_id, chunk_ptr, chunk_size) {
++      const callbacks = this.request_callbacks[request_id];
++      if (!callbacks) return;
+       let data = Module.HEAPU8.subarray(chunk_ptr, chunk_ptr + chunk_size);
+       let chunk = new Uint8Array(data);
+-      this.request_callbacks[request_id].data(chunk);
++      callbacks.data(chunk);
+     }
+     headers_callback(request_id, chunk_ptr, chunk_size) {
++      const callbacks = this.request_callbacks[request_id];
++      if (!callbacks) return;
+       let data = Module.HEAPU8.subarray(chunk_ptr, chunk_ptr + chunk_size);
+       let chunk = new Uint8Array(data);
+-      this.request_callbacks[request_id].headers(chunk);
++      callbacks.headers(chunk);
+     }
+     create_request(url, js_data_callback, js_end_callback, js_headers_callback) {
+       this.assert_ready();
+@@ -5719,6 +5725,7 @@ Several C libraries are used, and their licenses are listed below:
+     //wrap request callbacks using a readable stream and return the new callbacks
+     stream_response(url, headers_callback, end_callback, abort_signal) {
+       let stream_controller;
++      let request_id;
+       let aborted = false;
+       let headers_received = false;
+       let stream = new ReadableStream({
+@@ -5733,7 +5740,7 @@ Several C libraries are used, and their licenses are listed below:
+           if (headers_received) {
+             stream_controller.error("The operation was aborted.");
+           }
+-          real_end_callback(-1);
++          this.end_callback(request_id, -1);
+         });
+       }
+       let real_data_callback = (new_data) => {
+@@ -5747,7 +5754,7 @@ Several C libraries are used, and their licenses are listed below:
+           if (aborted) return;
+           aborted = true;
+           if (e instanceof TypeError) {
+-            end_callback(-1);
++            this.end_callback(request_id, -1);
+           } else {
+             throw e;
+           }
+@@ -5759,11 +5766,16 @@ Several C libraries are used, and their licenses are listed below:
+           headers_callback(stream);
+         }
+         try {
+-          stream_controller.close();
++          if (error > 0 && headers_received && !(error === 56 && stream.eof_delimited)) {
++            stream_controller.error(new TypeError(`Request failed with error code ${error}: ${get_error_str(error)}`));
++          } else {
++            stream_controller.close();
++          }
+         } catch {
+         }
+         end_callback(error);
+       };
++      request_id = this.last_request_id;
+       return this.create_request(url, real_data_callback, real_end_callback, () => {
+       });
+     }
+@@ -5808,7 +5820,9 @@ Several C libraries are used, and their licenses are listed below:
+         let body_ptr = null;
+         let headers_callback = (stream) => {
+           let response_json = c_func_str(_http_get_info, [http_handle]);
+-          let response = this.constructor.create_response(stream, JSON.parse(response_json));
++          let response_info = JSON.parse(response_json);
++          stream.eof_delimited = !response_info.headers.some(([name]) => /^(content-length|transfer-encoding)$/i.test(name));
++          let response = this.constructor.create_response(stream, response_info);
+           if (params.redirect === "error" && response.status >= 300 && response.status < 400) {
+             finish_callback(-2);
+             return;
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 159349224e630d97e32d3b6a095211484b772090..d18ca7168c6de02236c8e18b43954a4efeb07cc3 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -5609,19 +5609,25 @@ Several C libraries are used, and their licenses are listed below:
+       _session_set_options(this.session_ptr, connections_limit, cache_limit, host_conn_limit);
+     }
+     end_callback(request_id, error) {
++      const callbacks = this.request_callbacks[request_id];
++      if (!callbacks) return;
+       this.active_requests--;
+-      this.request_callbacks[request_id].end(error);
+       delete this.request_callbacks[request_id];
++      callbacks.end(error);
+     }
+     data_callback(request_id, chunk_ptr, chunk_size) {
++      const callbacks = this.request_callbacks[request_id];
++      if (!callbacks) return;
+       let data = Module.HEAPU8.subarray(chunk_ptr, chunk_ptr + chunk_size);
+       let chunk = new Uint8Array(data);
+-      this.request_callbacks[request_id].data(chunk);
++      callbacks.data(chunk);
+     }
+     headers_callback(request_id, chunk_ptr, chunk_size) {
++      const callbacks = this.request_callbacks[request_id];
++      if (!callbacks) return;
+       let data = Module.HEAPU8.subarray(chunk_ptr, chunk_ptr + chunk_size);
+       let chunk = new Uint8Array(data);
+-      this.request_callbacks[request_id].headers(chunk);
++      callbacks.headers(chunk);
+     }
+     create_request(url, js_data_callback, js_end_callback, js_headers_callback) {
+       this.assert_ready();
+@@ -5698,6 +5704,7 @@ Several C libraries are used, and their licenses are listed below:
+     //wrap request callbacks using a readable stream and return the new callbacks
+     stream_response(url, headers_callback, end_callback, abort_signal) {
+       let stream_controller;
++      let request_id;
+       let aborted = false;
+       let headers_received = false;
+       let stream = new ReadableStream({
+@@ -5712,7 +5719,7 @@ Several C libraries are used, and their licenses are listed below:
+           if (headers_received) {
+             stream_controller.error("The operation was aborted.");
+           }
+-          real_end_callback(-1);
++          this.end_callback(request_id, -1);
+         });
+       }
+       let real_data_callback = (new_data) => {
+@@ -5726,7 +5733,7 @@ Several C libraries are used, and their licenses are listed below:
+           if (aborted) return;
+           aborted = true;
+           if (e instanceof TypeError) {
+-            end_callback(-1);
++            this.end_callback(request_id, -1);
+           } else {
+             throw e;
+           }
+@@ -5738,11 +5745,16 @@ Several C libraries are used, and their licenses are listed below:
+           headers_callback(stream);
+         }
+         try {
+-          stream_controller.close();
++          if (error > 0 && headers_received && !(error === 56 && stream.eof_delimited)) {
++            stream_controller.error(new TypeError(`Request failed with error code ${error}: ${get_error_str(error)}`));
++          } else {
++            stream_controller.close();
++          }
+         } catch {
+         }
+         end_callback(error);
+       };
++      request_id = this.last_request_id;
+       return this.create_request(url, real_data_callback, real_end_callback, () => {
+       });
+     }
+@@ -5787,7 +5799,9 @@ Several C libraries are used, and their licenses are listed below:
+         let body_ptr = null;
+         let headers_callback = (stream) => {
+           let response_json = c_func_str(_http_get_info, [http_handle]);
+-          let response = this.constructor.create_response(stream, JSON.parse(response_json));
++          let response_info = JSON.parse(response_json);
++          stream.eof_delimited = !response_info.headers.some(([name]) => /^(content-length|transfer-encoding)$/i.test(name));
++          let response = this.constructor.create_response(stream, response_info);
+           if (params.redirect === "error" && response.status >= 300 && response.status < 400) {
+             finish_callback(-2);
+             return;

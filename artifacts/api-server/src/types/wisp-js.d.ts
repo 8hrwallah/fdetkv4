@@ -3,6 +3,7 @@ declare module "@mercuryworkshop/wisp-js/server" {
   import type { Duplex } from "node:stream";
 
   export const server: {
+    options: Record<string, unknown>;
     routeRequest(
       request: IncomingMessage,
       socket: Duplex,
